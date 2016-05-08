@@ -1,0 +1,7 @@
+project(ex11) {
+  includes += ../../../fructose/include
+  includes += ../../.. ../../../hamcrest-c++
+  libpaths += ../../../hamcrest-c++/lib
+  lit_libs += hamcrest
+}
+

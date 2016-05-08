@@ -1,0 +1,4 @@
+-Iinclude/
+-Ivendor/yaml-cpp/include
+-Ivendor/mosquitto-1.3.5/lib
+-Ivendor/mosquitto-1.3.5/lib/cpp

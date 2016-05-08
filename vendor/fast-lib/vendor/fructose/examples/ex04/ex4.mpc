@@ -1,0 +1,4 @@
+project(ex4) {
+  includes += ../../../fructose/include
+}
+

@@ -1,0 +1,16 @@
+workspace(ex) {
+ex01/ex1.mpc
+ex02/ex2.mpc
+ex03/ex3.mpc
+ex04/ex4.mpc
+ex05/ex5.mpc
+ex07/ex7.mpc
+ex08/ex8.mpc
+ex09/ex9.mpc
+ex10/ex10.mpc
+ex11/ex11.mpc
+ex14/ex14.mpc
+ex15/ex15.mpc
+ex16/ex16.mpc
+}
+

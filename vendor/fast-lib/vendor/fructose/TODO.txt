@@ -1,0 +1,3 @@
+I intend to see if FRUCTOSE can include some features that CxxTest has.
+Watch this space....!
+

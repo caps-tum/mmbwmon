@@ -1,0 +1,22 @@
+\contentsline {chapter}{\numberline {1}Introduction}{1}
+\contentsline {chapter}{\numberline {2}Why another C++ unit test framework?}{3}
+\contentsline {chapter}{\numberline {3}The FRUCTOSE approach}{5}
+\contentsline {section}{\numberline {3.1}The Curiously Recurring Template Pattern (CRTP)}{5}
+\contentsline {section}{\numberline {3.2}Named tests and command line options}{7}
+\contentsline {section}{\numberline {3.3}To inherit or not to inherit}{7}
+\contentsline {section}{\numberline {3.4}The assert macros}{9}
+\contentsline {chapter}{\numberline {4}How FRUCTOSE works}{11}
+\contentsline {chapter}{\numberline {5}FRUCTOSE coding techniques}{13}
+\contentsline {chapter}{\numberline {6}FRUCTOSE and the xUnit architecture}{15}
+\contentsline {section}{\numberline {6.1}What is the xUnit architecture}{15}
+\contentsline {section}{\numberline {6.2}Comparing FRUCTOSE to xUnit}{15}
+\contentsline {subsection}{\numberline {6.2.1}Test case}{16}
+\contentsline {subsection}{\numberline {6.2.2}Test fixtures}{16}
+\contentsline {subsection}{\numberline {6.2.3}Test suites}{17}
+\contentsline {subsection}{\numberline {6.2.4}Test execution}{17}
+\contentsline {subsection}{\numberline {6.2.5}Assertions}{17}
+\contentsline {chapter}{\numberline {7}The problems with CppUnit}{19}
+\contentsline {chapter}{\numberline {8}The problems with other frameworks}{21}
+\contentsline {chapter}{\numberline {9}The advantages of FRUCTOSE}{23}
+\contentsline {chapter}{\numberline {10}Possible future work}{25}
+\contentsline {chapter}{\numberline {11}Conclusion}{27}

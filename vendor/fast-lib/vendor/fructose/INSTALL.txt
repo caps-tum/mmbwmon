@@ -1,0 +1,21 @@
+FRUCTOSE is designed to work just using the header files,
+so there is no build and install as such. Simply make the
+headers available in whatever part of your compilation
+environment you find convenient. Note that they must reside
+in a directory called fructose.
+
+The examples come with Makefiles. The Makefiles have been
+produced using the build system MakeProjectCreator (MPC).
+The MPC input files are supplied along with the Makefiles
+they produced. The Makefiles are suitable for use with
+most Unix systems. The MPC files can be used to produce
+project files that will work with various versions of
+Microsoft Visual Studio (6,7,8,9,10).
+
+In the FRUCTOSE tarball a peer of the fructose directory called
+hamcrest-c++, which is the C++ port of hamcrest matchers
+by Jon Reid. Included within this is an MPC file (MakeProjectCreator),
+so that hamcrest can be built as a library using either make or
+Visual Studio. To use FRUCTOSE and hamcrest, compile your test
+harnesses with the macro FRUCTOSE_USING_HAMCREST.
+

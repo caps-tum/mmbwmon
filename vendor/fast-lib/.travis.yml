@@ -1,0 +1,45 @@
+language: cpp
+dist: trusty
+sudo: required
+
+compiler:
+    - clang
+    - gcc
+
+branches:
+  only:
+    - master
+    - sp/travis
+
+before_install:
+    - travis_retry sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+    - travis_retry sudo apt-get update -y
+
+install:
+    - travis_retry sudo apt-get -f install -y aptitude
+    - travis_retry sudo aptitude -f install -y cmake
+    - travis_retry sudo aptitude -f install -y gcc-4.9 g++-4.9
+    - travis_retry sudo aptitude -f install -y mosquitto
+    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
+    - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+    - sudo update-alternatives --config gcc
+    - sudo update-alternatives --config g++
+
+script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make
+    - travis_retry ./test/fastlib_communication_test -v
+    - travis_retry ./test/fastlib_task_test -v
+
+notifications:
+  recipients:
+    - spickartz@eonerc.rwth-aachen.de
+    - tohliger@eonerc.rwth-aachen.de
+  email:
+    on_success: change
+    on_failure: always
+
+os:
+  - linux

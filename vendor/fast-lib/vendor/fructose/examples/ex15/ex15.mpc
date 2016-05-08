@@ -1,0 +1,4 @@
+project(ex15) {
+  includes += ../../../fructose/include ../../../tclap/include 
+}
+

@@ -1,0 +1,6 @@
+-Iinclude/
+-Ivendor/libdistgen/include
+-Ivendor/fast-lib/include
+-Ivendor/fast-lib/vendor/yaml-cpp/include
+-Ivendor/fast-lib/vendor/mosquitto-1.3.5/lib
+-Ivendor/fast-lib/vendor/mosquitto-1.3.5/lib/cpp
