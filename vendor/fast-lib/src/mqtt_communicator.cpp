@@ -254,7 +254,7 @@ std::regex topic_to_regex(const std::string &topic)
 
 void MQTT_communicator::on_message(const mosquitto_message *msg)
 {
-	FASTLIB_LOG(comm_log, trace) << "Callback: on_message with message: " << msg->topic;
+	FASTLIB_LOG(comm_log, trace) << "Callback: on_message with topic: " << msg->topic;
 	try {
 		std::vector<decltype(subscriptions)::mapped_type> matched_subscriptions;
 		// Get all subscriptions matching the topic

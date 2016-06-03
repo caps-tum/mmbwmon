@@ -98,8 +98,8 @@ int main(int argc, char const *argv[]) {
 	parse_options(static_cast<size_t>(argc), argv);
 
 	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
-	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/reply", server, static_cast<int>(port),
-								 60);
+	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/response", server,
+								 static_cast<int>(port), 60);
 
 	std::cout << "MQTT ready!\n\n";
 
@@ -132,6 +132,6 @@ int main(int argc, char const *argv[]) {
 		const double mem = distgend_is_membound(dc);
 		fast::msg::agent::mmbwmon::reply reply(req.cores, mem);
 		std::cout << "Sending message:\n" << reply.to_string() << "\n";
-		comm.send_message(reply.to_string(), baseTopic + "/reply");
+		comm.send_message(reply.to_string(), baseTopic + "/response");
 	}
 }
