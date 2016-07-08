@@ -21,7 +21,7 @@ namespace agent {
 namespace mmbwmon {
 
 /**
- * topic: fast/agent/<hostname>/task/mmbwmon/reply
+ * topic: fast/agent/<hostname>/task/mmbwmon/request
  * Payload
  * task: mmbwmon request
  * cores: <list of cores>
