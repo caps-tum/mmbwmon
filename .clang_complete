@@ -1,5 +1,6 @@
 -Iinclude/
 -Ivendor/libdistgen/include
+-Ivendor/libponci/include
 -Ivendor/fast-lib/include
 -Ivendor/fast-lib/vendor/yaml-cpp/include
 -Ivendor/fast-lib/vendor/mosquitto-1.3.5/lib

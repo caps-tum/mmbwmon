@@ -6,11 +6,18 @@
 
 #include <distgen/distgen.h>
 
+#include <fast-lib/message/agent/mmbwmon/ack.hpp>
 #include <fast-lib/message/agent/mmbwmon/reply.hpp>
 #include <fast-lib/message/agent/mmbwmon/request.hpp>
+#include <fast-lib/message/agent/mmbwmon/restart.hpp>
+#include <fast-lib/message/agent/mmbwmon/stop.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
 
+#include <ponci/ponci.hpp>
+
 #include "helper.hpp"
+
+const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
 
 /*** config vars **/
 static distgend_initT distgen_init;
@@ -94,10 +101,59 @@ static void print_distgen_results(distgend_initT distgen_init) {
 	}
 }
 
+[[noreturn]] static void bench_thread(fast::MQTT_communicator &comm) {
+	while (true) {
+		fast::msg::agent::mmbwmon::request req;
+		auto m = comm.get_message();
+		std::cout << "Got message:\n" << m << "\n";
+		req.from_string(m);
+
+		distgend_configT dc;
+		dc.number_of_threads = req.cores.size();
+		for (int i = 0; i < req.cores.size(); ++i) {
+			dc.threads_to_use[i] = req.cores[i];
+		}
+
+		const double mem = distgend_is_membound(dc);
+		fast::msg::agent::mmbwmon::reply reply(req.cores, mem);
+		std::cout << "Sending message:\n" << reply.to_string() << "\n";
+		comm.send_message(reply.to_string(), baseTopic + "/response");
+	}
+}
+
+[[noreturn]] static void stop_thread(fast::MQTT_communicator &comm) {
+	comm.add_subscription(baseTopic + "/stop");
+	while (true) {
+		fast::msg::agent::mmbwmon::stop req;
+		auto m = comm.get_message(baseTopic + "/stop");
+		std::cout << "Got message:\n" << m << "\n";
+		req.from_string(m);
+
+		cgroup_freeze(req.cgroup);
+
+		fast::msg::agent::mmbwmon::ack a;
+		comm.send_message(a.to_string(), baseTopic + "/stop/ack");
+	}
+}
+
+[[noreturn]] static void restart_thread(fast::MQTT_communicator &comm) {
+	comm.add_subscription(baseTopic + "/restart");
+	while (true) {
+		fast::msg::agent::mmbwmon::restart req;
+		auto m = comm.get_message(baseTopic + "/restart");
+		std::cout << "Got message:\n" << m << "\n";
+		req.from_string(m);
+
+		cgroup_thaw(req.cgroup);
+
+		fast::msg::agent::mmbwmon::ack a;
+		comm.send_message(a.to_string(), baseTopic + "/restart/ack");
+	}
+}
+
 int main(int argc, char const *argv[]) {
 	parse_options(static_cast<size_t>(argc), argv);
 
-	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
 	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/response", server,
 								 static_cast<int>(port), 60);
 
@@ -117,21 +173,11 @@ int main(int argc, char const *argv[]) {
 
 	print_distgen_results(distgen_init);
 
-	while (true) {
-		fast::msg::agent::mmbwmon::request req;
-		auto m = comm.get_message();
-		std::cout << "Got message:\n" << m << "\n";
-		req.from_string(m);
+	std::thread bench(bench_thread, std::ref(comm));
+	std::thread restart(restart_thread, std::ref(comm));
+	std::thread stop(stop_thread, std::ref(comm));
 
-		distgend_configT dc;
-		dc.number_of_threads = req.cores.size();
-		for (int i = 0; i < req.cores.size(); ++i) {
-			dc.threads_to_use[i] = req.cores[i];
-		}
-
-		const double mem = distgend_is_membound(dc);
-		fast::msg::agent::mmbwmon::reply reply(req.cores, mem);
-		std::cout << "Sending message:\n" << reply.to_string() << "\n";
-		comm.send_message(reply.to_string(), baseTopic + "/response");
-	}
+	bench.join();
+	restart.join();
+	stop.join();
 }
