@@ -23,12 +23,12 @@ namespace fast {
 
 	#define FASTLIB_LOG_SET_LEVEL_GLOBAL(var, lvl) \
 		namespace fast { namespace log { \
-			struct Level_setter_var { \
-				Level_setter_var (){ \
+			struct Level_setter_##var { \
+				Level_setter_##var (){ \
 					fast::log::var->set_level(spdlog::level::lvl); \
 				} \
 			}; \
-			Level_setter_var level_setter_var;\
+			Level_setter_##var level_setter_##var;\
 		}}
 
 	#define FASTLIB_LOG(var, lvl) (fast::log::var->lvl())

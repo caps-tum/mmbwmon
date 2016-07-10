@@ -21,11 +21,11 @@ namespace agent {
 namespace mmbwmon {
 
 /**
- * topic: fast/agent/<hostname>/task/mmbwmon/reply
+ * topic: fast/agent/<hostname>/task/mmbwmon/response
  * Payload
- * task: mmbwmon reply
+ * task: mmbwmon response
  * cores: <list of cores>
- * reply: <value between 0.33 and 1>
+ * response: <value between 0.33 and 1>
  */
 
 struct reply : public fast::Serializable

@@ -130,7 +130,7 @@ struct Task_tester :
 		std::cout << "Test not implemented." << std::endl;
 	}
 
-	void task_cont1(const std::string &test_name)
+	void task_cont_start(const std::string &test_name)
 	{
 		Task_container tc1;
 		tc1.id = "42";
@@ -150,6 +150,24 @@ struct Task_tester :
 		tc2.from_string(buf);
 		fructose_assert(tc2.type() == "start vm");
 	}
+
+	void task_cont_migrate(const std::string &test_name)
+	{
+		Task_container tc1;
+		tc1.id = "42";
+		auto mig = std::make_shared<Migrate>();
+		mig->vm_name = "vm1";
+		mig->dest_hostname = "desthost";
+		mig->time_measurement = true;
+		mig->live_migration = true;
+		tc1.tasks.push_back(mig);
+
+		Task_container tc2;
+		auto buf = tc1.to_string();
+		std::cout << "Serialized string: " << buf << std::endl;
+		tc2.from_string(buf);
+		fructose_assert(tc2.type() == "migrate vm");
+	}
 };
 
 int main(int argc, char **argv)
@@ -163,6 +181,7 @@ int main(int argc, char **argv)
 	tests.add_test("stop2", &Task_tester::stop2);
 	tests.add_test("migrate", &Task_tester::migrate);
 	tests.add_test("quit", &Task_tester::quit);
-	tests.add_test("task_cont1", &Task_tester::task_cont1);
+	tests.add_test("task_cont_start", &Task_tester::task_cont_start);
+	tests.add_test("task_cont_migrate", &Task_tester::task_cont_migrate);
 	return tests.run(argc, argv);
 }

@@ -44,6 +44,7 @@ struct Task :
 	std::string vm_name;
 	Optional<bool> concurrent_execution;
 	Optional<bool> time_measurement;
+	Optional<std::string> driver;
 };
 
 /**
@@ -170,6 +171,7 @@ struct Migrate :
 	Optional<bool> live_migration;
 	Optional<bool> rdma_migration;
 	Optional<unsigned int> pscom_hook_procs;
+	Optional<std::string> transport;
 };
 
 /**
