@@ -121,6 +121,8 @@ double distgend_is_membound(distgend_configT config) {
 static double bench(distgend_configT config) {
 	double ret = 0.0;
 
+	omp_set_num_threads(system_config.number_of_threads);
+
 #pragma omp parallel reduction(+ : ret)
 	{
 		size_t tid = (size_t)omp_get_thread_num();
@@ -170,4 +172,6 @@ static void set_affinity(distgend_initT init) {
 	cgroup_set_mems(DISTGEN_CGROUP_NAME, arr, init.NUMA_domains);
 
 	cgroup_add_me(DISTGEN_CGROUP_NAME);
+
+	free(arr);
 }
