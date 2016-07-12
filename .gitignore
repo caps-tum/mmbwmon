@@ -28,5 +28,6 @@
 
 # Build directory
 build
+macbuild
 
 .sync-config.cson

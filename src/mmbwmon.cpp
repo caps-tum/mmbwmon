@@ -17,8 +17,6 @@
 
 #include "helper.hpp"
 
-const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
-
 /*** config vars **/
 static distgend_initT distgen_init;
 
@@ -108,13 +106,21 @@ static void print_distgen_results(distgend_initT distgen_init) {
 		std::cout << "Got message:\n" << m << "\n";
 		req.from_string(m);
 
+		std::cout << "Running bench on cores ";
+
 		distgend_configT dc;
 		dc.number_of_threads = req.cores.size();
 		for (int i = 0; i < req.cores.size(); ++i) {
 			dc.threads_to_use[i] = req.cores[i];
+			std::cout << static_cast<int>(dc.threads_to_use[i]) << ", ";
 		}
 
+		std::cout << "\n";
+
 		const double mem = distgend_is_membound(dc);
+
+		std::cout << "Result: " << mem << std::endl;
+
 		fast::msg::agent::mmbwmon::reply reply(req.cores, mem);
 		std::cout << "Sending message:\n" << reply.to_string() << "\n";
 		comm.send_message(reply.to_string(), baseTopic + "/response");
@@ -152,12 +158,9 @@ static void print_distgen_results(distgend_initT distgen_init) {
 }
 
 int main(int argc, char const *argv[]) {
+	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
+
 	parse_options(static_cast<size_t>(argc), argv);
-
-	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/response", server,
-								 static_cast<int>(port), 60);
-
-	std::cout << "MQTT ready!\n\n";
 
 	std::cout << "Starting distgen initialization ...";
 	std::cout.flush();
@@ -172,6 +175,11 @@ int main(int argc, char const *argv[]) {
 	std::cout << " done!\n\n";
 
 	print_distgen_results(distgen_init);
+
+	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/response", server,
+								 static_cast<int>(port), 60);
+
+	std::cout << "MQTT ready!\n\n";
 
 	std::thread bench(bench_thread, std::ref(comm));
 	std::thread restart(restart_thread, std::ref(comm));

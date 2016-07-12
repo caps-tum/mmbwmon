@@ -11,8 +11,9 @@ extern std::string server;
 extern size_t port;
 
 inline std::string get_hostname() {
-	char hostname[60];
-	assert(gethostname(hostname, 60) == 0);
+	char hostname[255];
+	assert(gethostname(hostname, 254) == 0);
+	hostname[254] = '\0';
 	return std::string(hostname);
 }
 
