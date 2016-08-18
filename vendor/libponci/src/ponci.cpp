@@ -11,6 +11,7 @@
 
 #include "ponci/ponci.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -21,6 +22,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include <dirent.h>
 #include <errno.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -30,8 +32,6 @@
 
 // default mount path
 static std::string path_prefix("/sys/fs/cgroup/");
-
-// TODO function to change prefix?
 
 /////////////////////////////////////////////////////////////////
 // PROTOTYPES
@@ -50,6 +50,8 @@ template <typename T> static inline std::vector<T> read_lines_from_file(const st
 template <typename T> static inline T string_to_T(const std::string &s, std::size_t &done);
 // template <> inline unsigned long string_to_T<unsigned long>(const std::string &s, std::size_t &done);
 template <> inline int string_to_T<int>(const std::string &s, std::size_t &done);
+
+static std::vector<int> get_tids_from_pid(const int pid);
 
 /////////////////////////////////////////////////////////////////
 // EXPORTED FUNCTIONS
@@ -162,21 +164,22 @@ void cgroup_wait_thawed(const char *name) {
 }
 
 void cgroup_kill(const char *name) {
-	cgroup_freeze(name);
-	cgroup_wait_frozen(name);
+	auto tids = get_tids_from_pid(getpid());
 
 	// get all pids
 	std::vector<int> pids = read_lines_from_file<int>(cgroup_path(name) + std::string("tasks"));
 
 	// send kill
 	for (__pid_t pid : pids) {
-		if (kill(pid, SIGKILL) != 0) {
-			throw std::runtime_error(strerror(errno));
+		if (std::find(tids.begin(), tids.end(), pid) != tids.end()) {
+			// pid in tids
+		} else {
+			// pid not in tids
+			if (kill(pid, SIGTERM) != 0) {
+				throw std::runtime_error(strerror(errno));
+			}
 		}
 	}
-
-	// wake up
-	cgroup_thaw(name);
 
 	// wait until tasks empty
 	while (pids.size() != 0) {
@@ -191,6 +194,10 @@ void cgroup_kill(const char *name) {
 /////////////////////////////////////////////////////////////////
 
 static inline std::string cgroup_path(const char *name) {
+	const char *env = std::getenv("PONCI_PATH");
+	if (env != nullptr) {
+		path_prefix = std::string(env);
+	}
 	std::string res(path_prefix);
 	if (strcmp(name, "") != 0) {
 		res.append(name);
@@ -315,3 +322,32 @@ template <> unsigned long string_to_T<unsigned long>(const std::string &s, std::
 	return stoul(s, &done);
 }
 #endif
+
+static std::vector<int> get_tids_from_pid(const int pid) {
+	std::string path("/proc/" + std::to_string(pid) + "/task/");
+	dirent *dent;
+	DIR *srcdir = opendir(path.c_str());
+
+	if (srcdir == nullptr) {
+		throw std::runtime_error(strerror(errno));
+	}
+
+	std::vector<int> ret;
+
+	while ((dent = readdir(srcdir)) != nullptr) {
+		struct stat st;
+
+		if (strcmp(dent->d_name, ".") == 0 || strcmp(dent->d_name, "..") == 0) continue;
+
+		if (fstatat(dirfd(srcdir), dent->d_name, &st, 0) < 0) {
+			continue;
+		}
+
+		if (S_ISDIR(st.st_mode)) {
+			std::size_t i;
+			ret.push_back(string_to_T<int>(std::string(dent->d_name), i));
+		}
+	}
+	closedir(srcdir);
+	return ret;
+}
