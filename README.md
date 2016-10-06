@@ -14,7 +14,7 @@ require:
 
 * A compiler supporting C++14 using the Intel OpenMP runtime (i.e. Clang or Intel Compiler).
 * CMake (version >= 3.1)
-* cgroupfs mounted at `/sys/fs/cgroup` ("mount -t cgroup cgroup /sys/fs/cgroup/")
+* cgroupfs mounted at `/sys/fs/cgroup` (`mount -t cgroup cgroup /sys/fs/cgroup/`).
 
 
 ## Setup
