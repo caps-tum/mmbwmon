@@ -47,6 +47,10 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # Using Intel C++
+
+  # CXX_STANDARD feature not working with older cmake + Intel
+  ADD_DEFINITIONS(-std=c++11)
+
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
     ADD_DEFINITIONS(-g -fast)
   endif()
