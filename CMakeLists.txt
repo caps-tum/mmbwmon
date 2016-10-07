@@ -127,11 +127,11 @@ include_directories(include)
 # Compiling and linking
 add_executable(mmbwmon src/mmbwmon.cpp src/helper.cpp)
 add_dependencies(mmbwmon libdistgen libfast libponci)
-target_link_libraries(mmbwmon distgen fastlib ponci)
+target_link_libraries(mmbwmon distgen fastlib ponci rt)
 set_property(TARGET mmbwmon PROPERTY CXX_STANDARD 14)
 
 add_executable(request src/request.cpp src/helper.cpp)
 add_dependencies(request libfast)
-target_link_libraries(request fastlib)
+target_link_libraries(request fastlib rt)
 set_property(TARGET request PROPERTY CXX_STANDARD 14)
 ########
