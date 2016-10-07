@@ -16,6 +16,16 @@ namespace msg {
 namespace migfra {
 
 // Converts integer type numbers to string in hex format.
+
+#ifdef __INTEL_COMPILER
+// A special "simplified" version for Intel without using templates
+std::string to_hex_string(int integer, int digits, bool show_base = true)
+{
+        std::stringstream ss;
+        ss << (show_base ? "0x" : "") << std::hex << std::setfill('0') << std::setw(digits) << +integer;
+        return ss.str();
+}
+#else
 template<typename T, typename std::enable_if<std::is_integral<T>{}>::type* = nullptr> 
 std::string to_hex_string(const T &integer, int digits, bool show_base = true)
 {
@@ -23,6 +33,7 @@ std::string to_hex_string(const T &integer, int digits, bool show_base = true)
 	ss << (show_base ? "0x" : "") << std::hex << std::setfill('0') << std::setw(digits) << +integer;
 	return ss.str();
 }
+#endif
 
 //
 // PCI_id implementation
