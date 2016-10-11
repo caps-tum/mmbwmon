@@ -62,7 +62,7 @@ int main(int argc, char const *argv[]) {
 
 	parse_options(static_cast<size_t>(argc), argv);
 
-	fast::MQTT_communicator comm(requestID, baseTopic + "/reply", baseTopic + "/request", server,
+	fast::MQTT_communicator comm(requestID, baseTopic + "/response", baseTopic + "/request", server,
 								 static_cast<int>(port), 60);
 
 	std::cout << "MQTT ready!\n\n";
