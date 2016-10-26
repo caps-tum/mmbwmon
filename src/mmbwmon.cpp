@@ -13,7 +13,9 @@
 #include <fast-lib/message/agent/mmbwmon/stop.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
 
+#ifdef CGROUP_SUPPORT
 #include <ponci/ponci.hpp>
+#endif
 
 #include "helper.hpp"
 
@@ -127,6 +129,7 @@ static void print_distgen_results(distgend_initT distgen_init) {
 	}
 }
 
+#ifdef CGROUP_SUPPORT
 [[noreturn]] static void stop_thread(fast::MQTT_communicator &comm) {
 	comm.add_subscription(baseTopic + "/stop");
 	while (true) {
@@ -156,6 +159,7 @@ static void print_distgen_results(distgend_initT distgen_init) {
 		comm.send_message(a.to_string(), baseTopic + "/restart/ack");
 	}
 }
+#endif
 
 int main(int argc, char const *argv[]) {
 	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
@@ -164,13 +168,7 @@ int main(int argc, char const *argv[]) {
 
 	std::cout << "Starting distgen initialization ...";
 	std::cout.flush();
-	try {
-		distgend_init(distgen_init);
-	} catch (...) {
-		std::cout << "\n\nDistgen init failed. Please make sure that cgroup is mounted at /sys/fs/cgroup/ and you "
-					 "have read + write access.";
-		exit(-1);
-	}
+	distgend_init(distgen_init);
 
 	std::cout << " done!\n\n";
 
@@ -182,10 +180,14 @@ int main(int argc, char const *argv[]) {
 	std::cout << "MQTT ready!\n\n";
 
 	std::thread bench(bench_thread, std::ref(comm));
+#ifdef CGROUP_SUPPORT
 	std::thread restart(restart_thread, std::ref(comm));
 	std::thread stop(stop_thread, std::ref(comm));
+#endif
 
 	bench.join();
+#ifdef CGROUP_SUPPORT
 	restart.join();
 	stop.join();
+#endif
 }
