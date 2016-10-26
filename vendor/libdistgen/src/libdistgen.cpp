@@ -10,7 +10,7 @@
 #include "distgen/distgen.h"
 #include "distgen/distgen_internal.h"
 
-#define _GNU_SOURCE
+//#define _GNU_SOURCE
 //#define __USE_GNU
 
 #include <cassert>
@@ -22,17 +22,26 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <omp.h>
-
-#include "ponci/ponci.hpp"
+#include <pthread.h>
 
 // TODO We currently allocate the buffers once, should we change this?
 
 // GByte/s measured for i cores is stored in [i-1]
 static double distgen_mem_bw_results[DISTGEN_MAXTHREADS];
 
+// threads, barrier, and attributes
+static pthread_t threads[DISTGEN_MAXTHREADS];
+static pthread_barrier_t barrier;
+static pthread_attr_t thread_attr[DISTGEN_MAXTHREADS];
+
 // the configuration of the system
 static distgend_initT system_config;
+
+// arguments to thread functions
+typedef struct thread_args {
+	distgend_configT *config;
+	size_t tid;
+} thread_argsT;
 
 // Prototypes
 static void set_affinity(distgend_initT init);
@@ -60,7 +69,6 @@ void distgend_init(distgend_initT init) {
 
 	// set the number of threads to the maximum available in the system
 	tcount = init.number_of_threads;
-	omp_set_num_threads(tcount);
 
 	set_affinity(init);
 
@@ -118,35 +126,65 @@ double distgend_is_membound(distgend_configT config) {
 // INTERNAL FUNCTIONS
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-static double bench(distgend_configT config) {
-	double ret = 0.0;
+static void *thread_benchmark(void *arg) {
+	thread_argsT *thread_args = (thread_argsT*)arg;
+	double *ret = (double*)calloc(1, sizeof(double));
+	
+	pthread_barrier_wait(&barrier);
+	for (size_t i = 0; i < thread_args->config->number_of_threads; ++i) {
+		if (thread_args->tid == thread_args->config->threads_to_use[i]) {
+			double tsum = 0.0;
+			u64 taCount = 0;
 
-	omp_set_num_threads(system_config.number_of_threads);
+			const double t1 = wtime();
+			runBench(buffer[thread_args->tid], iter, depChain, doWrite, &tsum, &taCount);
+			const double t2 = wtime();
 
-#pragma omp parallel reduction(+ : ret)
-	{
-		size_t tid = (size_t)omp_get_thread_num();
-		for (size_t i = 0; i < config.number_of_threads; ++i) {
-			if (tid == config.threads_to_use[i]) {
-				double tsum = 0.0;
-				u64 taCount = 0;
-
-				const double t1 = wtime();
-				runBench(buffer[omp_get_thread_num()], iter, depChain, doWrite, &tsum, &taCount);
-				const double t2 = wtime();
-
-				const double temp = taCount * 64.0 / 1024.0 / 1024.0 / 1024.0;
-				ret += temp / (t2 - t1);
-			}
+			const double temp = taCount * 64.0 / 1024.0 / 1024.0 / 1024.0;
+			*ret += temp / (t2 - t1);
 		}
 	}
+
+	pthread_exit((void*)ret);
+}
+
+
+static double bench(distgend_configT config) {
+	double ret = 0.0;
+	
+	thread_argsT thread_args[system_config.number_of_threads];
+	
+	// inititalize barrier
+	int res = pthread_barrier_init(&barrier, 
+	    			       NULL,
+				       system_config.number_of_threads);
+	assert(res == 0);
+	
+	for (size_t i = 0; i<system_config.number_of_threads; ++i) {
+		thread_args[i].tid = i;
+		thread_args[i].config = &config;
+		int res = pthread_create(&threads[i],
+		    			 &thread_attr[i],
+		                         thread_benchmark, &thread_args[i]);
+		assert(res == 0);
+	}
+	
+	for (size_t i = 0; i<system_config.number_of_threads; ++i) {
+		double *ret_tmp;
+		int res = pthread_join(threads[i], (void**)&ret_tmp);
+		assert(res == 0);
+		ret += *ret_tmp;
+		free (ret_tmp);
+	}
+	
+	// destroy barrier
+	res = pthread_barrier_destroy(&barrier);
+	assert(res == 0);
 
 	return ret;
 }
 
 static void set_affinity(distgend_initT init) {
-	cgroup_create(DISTGEN_CGROUP_NAME);
-
 	size_t *arr = (size_t *)malloc(sizeof(size_t) * init.number_of_threads);
 
 	const size_t phys_cores_per_numa = init.number_of_threads / (init.NUMA_domains * init.SMT_factor);
@@ -166,12 +204,16 @@ static void set_affinity(distgend_initT init) {
 	}
 	assert(i == init.number_of_threads);
 
-	cgroup_set_cpus(DISTGEN_CGROUP_NAME, arr, init.number_of_threads);
-
-	for (size_t n = 0; n < init.NUMA_domains; ++n) arr[n] = n;
-	cgroup_set_mems(DISTGEN_CGROUP_NAME, arr, init.NUMA_domains);
-
-	cgroup_add_me(DISTGEN_CGROUP_NAME);
+	// set thread affinity
+	for (size_t i = 0; i<init.number_of_threads; ++i) {
+		cpu_set_t set;
+		CPU_ZERO(&set);
+		CPU_SET(arr[i], &set);
+		int res = pthread_attr_setaffinity_np(&thread_attr[i],
+						      sizeof(cpu_set_t),
+						      &set);
+		assert(res == 0);
+	}
 
 	free(arr);
 }

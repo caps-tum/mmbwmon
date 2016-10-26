@@ -17,7 +17,11 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
-#include <omp.h>
+#include <pthread.h>
+#include <sched.h>
+
+static pthread_t threads[DISTGEN_MAXTHREADS];
+static pthread_attr_t thread_attr[DISTGEN_MAXTHREADS];
 
 // make sure that gcd(size,diff) is 1 by increasing size, return size
 static int adjustSize(u64 size, u64 diff);
@@ -30,7 +34,7 @@ struct entry *buffer[DISTGEN_MAXTHREADS];
 
 // options (to be reset to default if 0)
 int distsUsed = 0;
-size_t tcount = 0; // number of threads to use
+size_t tcount = 1; // number of threads to use (default: 1)
 int pseudoRandom = 0;
 int depChain = 0;
 int doWrite = 0;
@@ -79,6 +83,36 @@ void addDist(u64 size) {
 	distsUsed++;
 }
 
+static void *init_memory_per_thread(void *arg) {
+	size_t tid = *((size_t*)arg);
+	struct entry *buf;
+	u64 idx, blk, nextIdx;
+	u64 idxMax = blocks * BLOCKLEN / sizeof(struct entry);
+	u64 idxIncr = blockDiff * BLOCKLEN / sizeof(struct entry);
+
+	// allocate and initialize used memory
+	buffer[tid] = (struct entry *)memalign(64, blocks * BLOCKLEN);
+	buf = buffer[tid];
+	assert(buf != nullptr);
+	for (idx = 0; idx < idxMax; idx++) {
+		buf[idx].v = (double)idx;
+		buf[idx].next = 0;
+	}
+
+	// generate dependency chain
+	idx = 0;
+	for (blk = 0; blk < blocks; blk++) {
+		nextIdx = idx + idxIncr;
+		if (nextIdx >= idxMax) nextIdx -= idxMax;
+		// fprintf(stderr, " Blk %d, POff %d\n", blk, nextIdx);
+		assert(buf[idx].next == 0);
+		buf[idx].next = buf + nextIdx;
+		idx = nextIdx;
+	}
+
+	return nullptr;
+}
+
 void initBufs() {
 	assert(tcount < DISTGEN_MAXTHREADS);
 	assert(sizeof(struct entry) == 16);
@@ -116,33 +150,19 @@ void initBufs() {
 		fprintf(stderr, "  accesses per iteration and thread: %s (total %s accs = %sB)\n", acBuf, tacBuf, tasBuf);
 	}
 
-#pragma omp parallel
-	{
-		assert(tcount == (size_t)omp_get_num_threads());
-		struct entry *buf;
-		u64 idx, blk, nextIdx;
-		u64 idxMax = blocks * BLOCKLEN / sizeof(struct entry);
-		u64 idxIncr = blockDiff * BLOCKLEN / sizeof(struct entry);
-
-		// allocate and initialize used memory
-		buffer[omp_get_thread_num()] = (struct entry *)memalign(64, blocks * BLOCKLEN);
-		buf = buffer[omp_get_thread_num()];
-		assert(buf != nullptr);
-		for (idx = 0; idx < idxMax; idx++) {
-			buf[idx].v = (double)idx;
-			buf[idx].next = 0;
-		}
-
-		// generate dependency chain
-		idx = 0;
-		for (blk = 0; blk < blocks; blk++) {
-			nextIdx = idx + idxIncr;
-			if (nextIdx >= idxMax) nextIdx -= idxMax;
-			// fprintf(stderr, " Blk %d, POff %d\n", blk, nextIdx);
-			assert(buf[idx].next == 0);
-			buf[idx].next = buf + nextIdx;
-			idx = nextIdx;
-		}
+	// initialize buffers in general
+	size_t thread_ids[tcount];
+	for (size_t i = 0; i<tcount; i++) {
+		thread_ids[i] = i;
+		int res = pthread_create(&threads[i],
+		    			 &thread_attr[i],
+		                         init_memory_per_thread, &thread_ids[i]);
+		assert(res == 0);
+	}
+	
+	for (size_t i = 0; i<tcount; i++) {
+		int res = pthread_join(threads[i], NULL);
+		assert(res == 0);
 	}
 }
 
