@@ -1,3 +1,4 @@
+-DCGROUP_SUPPORT
 -Iinclude/
 -Ivendor/libdistgen/include
 -Ivendor/libponci/include

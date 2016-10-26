@@ -33,8 +33,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     ADD_DEFINITIONS(-Wno-c++98-compat -Wno-shadow -Wno-c++98-compat-pedantic -Wno-padded -Wno-weak-vtables -Wno-extra-semi -Wno-exit-time-destructors -Wno-global-constructors)
   endif()
 
-
-
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # Using GCC
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
@@ -69,13 +67,6 @@ find_package(Threads REQUIRED)
 ########
 
 ########
-# OpenMP
-find_package(OpenMP REQUIRED)
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-########
-
-########
 # libdistgen
 ExternalProject_Add(libdistgen
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libdistgen
@@ -90,6 +81,8 @@ include_directories(${libdistgen_path}/include)
 link_directories(${libdistgen_path}/lib)
 ########
 
+OPTION(BUILD_CGROUP_SUPPORT "Build with cgroup start/stop support." ON)
+
 ########
 # libponci
 ExternalProject_Add(libponci
@@ -103,6 +96,10 @@ ExternalProject_Get_Property(libponci install_dir)
 set (libponci_path ${install_dir})
 include_directories(${libponci_path}/include)
 link_directories(${libponci_path}/lib)
+
+IF(BUILD_CGROUP_SUPPORT)
+ADD_DEFINITIONS(-DCGROUP_SUPPORT)
+ENDIF(BUILD_CGROUP_SUPPORT)
 ########
 
 ########
@@ -126,12 +123,16 @@ include_directories(include)
 ########
 # Compiling and linking
 add_executable(mmbwmon src/mmbwmon.cpp src/helper.cpp)
-add_dependencies(mmbwmon libdistgen libfast libponci)
-target_link_libraries(mmbwmon distgen fastlib ponci rt)
 set_property(TARGET mmbwmon PROPERTY CXX_STANDARD 14)
+add_dependencies(mmbwmon libdistgen libfast)
+target_link_libraries(mmbwmon distgen fastlib rt ${CMAKE_THREAD_LIBS_INIT})
+IF(BUILD_CGROUP_SUPPORT)
+    add_dependencies(mmbwmon libponci)
+    target_link_libraries(mmbwmon ponci)
+ENDIF(BUILD_CGROUP_SUPPORT)
 
 add_executable(request src/request.cpp src/helper.cpp)
 add_dependencies(request libfast)
-target_link_libraries(request fastlib rt)
+target_link_libraries(request fastlib rt ${CMAKE_THREAD_LIBS_INIT})
 set_property(TARGET request PROPERTY CXX_STANDARD 14)
 ########

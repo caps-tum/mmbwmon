@@ -1,8 +1,6 @@
 #include "helper.hpp"
 
-#include <iostream>
-
-#include <cassert>
+#include <string>
 
 /*** config vars **/
 std::string server;
