@@ -72,41 +72,45 @@ matrix:
           - COMPILERC=gcc-6
           - CGROUP_SUP=FALSE
     - compiler: clang
-      env:
-          - COMPILERC=clang
-          - CLANGV=3.6.2
-          - CGROUP_SUP=TRUE
-    - compiler: clang
-      env:
-          - COMPILERC=clang
-          - CLANGV=3.6.2
-          - CGROUP_SUP=FALSE
-    - compiler: clang
-      env:
-          - COMPILERC=clang
-          - CLANGV=3.7.1
-          - CGROUP_SUP=TRUE
-    - compiler: clang
-      env:
-          - COMPILERC=clang
-          - CLANGV=3.7.1
-          - CGROUP_SUP=FALSE
-    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
       env:
           - COMPILERC=clang
           - CLANGV=3.8.1
           - CGROUP_SUP=TRUE
     - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
       env:
           - COMPILERC=clang
           - CLANGV=3.8.1
           - CGROUP_SUP=FALSE
     - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
       env:
           - COMPILERC=clang
           - CLANGV=3.9.0
           - CGROUP_SUP=TRUE
     - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
       env:
           - COMPILERC=clang
           - CLANGV=3.9.0
@@ -126,4 +130,3 @@ script:
   - cd build
   - cmake -DCMAKE_CXX_COMPILER=$COMPILERCXX -DCMAKE_C_COMPILER=$COMPILERC -DBUILD_CGROUP_SUPPORT=$CGROUP_SUP -DCMAKE_INSTALL_PREFIX=/tmp/ ..
   - make
-  - make install
