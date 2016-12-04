@@ -111,15 +111,19 @@ add_library(${FASTLIB} ${SRC} ${HEADERS})
 
 # Enable support for external projects
 include(ExternalProject)
+set(EXTERNAL_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/external_includes)
+file(MAKE_DIRECTORY ${EXTERNAL_INCLUDES}/fast-lib/external)
+include_directories(SYSTEM ${EXTERNAL_INCLUDES}/fast-lib/external)
 
 ########
 # mosquitto
 ExternalProject_Add(mosquitto
-	SOURCE_DIR ${PROJECT_SOURCE_DIR}/vendor/mosquitto-1.3.5
+	SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/mosquitto-1.3.5
 	CMAKE_COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake
-	CMAKE_ARGS -DWITH_SRV=OFF -DWITH_TLS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_C_FLAGS=-fpic -DCMAKE_CXX_FLAGS=-fpic)
+	CMAKE_ARGS -DWITH_SRV=OFF -DWITH_TLS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_C_FLAGS=-fpic -DCMAKE_CXX_FLAGS=-fpic
+)
 
-add_dependencies(${FASTLIB} "mosquitto")
+add_dependencies(${FASTLIB} mosquitto)
 
 # Store mosquitto variables
 ExternalProject_Get_Property(mosquitto install_dir)
@@ -127,7 +131,13 @@ set(MOSQUITTO_LIBRARIES ${install_dir}/lib/libmosquittopp.a ${install_dir}/lib/l
 set(MOSQUITTO_INCLUDE_DIR "${install_dir}/include")
 set(LIBS "${LIBS}" "${MOSQUITTO_LIBRARIES}")
 
-include_directories(SYSTEM "${MOSQUITTO_INCLUDE_DIR}")
+#include_directories(SYSTEM "${MOSQUITTO_INCLUDE_DIR}")
+add_custom_command(
+	TARGET mosquitto
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E create_symlink "${MOSQUITTO_INCLUDE_DIR}/mosquitto.h" "${EXTERNAL_INCLUDES}/fast-lib/external/mosquitto.h"
+	COMMAND ${CMAKE_COMMAND} -E create_symlink "${MOSQUITTO_INCLUDE_DIR}/mosquittopp.h" "${EXTERNAL_INCLUDES}/fast-lib/external/mosquittopp.h"
+	COMMAND ${CMAKE_COMMAND} -E create_symlink "${MOSQUITTO_INCLUDE_DIR}/mosquitto_plugin.h" "${EXTERNAL_INCLUDES}/fast-lib/external/mosquitto_plugin.h")
 
 # Install headers
 install(DIRECTORY "${MOSQUITTO_INCLUDE_DIR}/" DESTINATION include/fast-lib/external)
@@ -138,9 +148,9 @@ install(DIRECTORY "${MOSQUITTO_INCLUDE_DIR}/" DESTINATION include/fast-lib/exter
 ExternalProject_Add(yaml-cpp
 	SOURCE_DIR ${PROJECT_SOURCE_DIR}/vendor/yaml-cpp
 	CMAKE_COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake
-	CMAKE_ARGS -DCMAKE_CXX_FLAGS=-fpic -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+	CMAKE_ARGS -DCMAKE_CXX_FLAGS=-fpic -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DYAML_CPP_BUILD_TOOLS=OFF)
 
-add_dependencies(${FASTLIB} "yaml-cpp")
+add_dependencies(${FASTLIB} yaml-cpp)
 
 # Store yaml-cpp variables
 ExternalProject_Get_Property(yaml-cpp install_dir)
@@ -148,7 +158,11 @@ set(YAMLCPP_LIBRARY "${install_dir}/lib/libyaml-cpp.a")
 set(YAMLCPP_INCLUDE_DIR "${install_dir}/include")
 set(LIBS "${LIBS}" "${YAMLCPP_LIBRARY}")
 
-include_directories(SYSTEM "${YAMLCPP_INCLUDE_DIR}")
+#include_directories(SYSTEM "${YAMLCPP_INCLUDE_DIR}")
+add_custom_command(
+	TARGET yaml-cpp
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E create_symlink "${YAMLCPP_INCLUDE_DIR}/yaml-cpp" "${EXTERNAL_INCLUDES}/fast-lib/external/yaml-cpp")
 
 # Install headers
 install(DIRECTORY "${YAMLCPP_INCLUDE_DIR}/" DESTINATION include/fast-lib/external)
@@ -156,8 +170,14 @@ install(DIRECTORY "${YAMLCPP_INCLUDE_DIR}/" DESTINATION include/fast-lib/externa
 
 ########
 # spdlog
-set(SPDLOG_INCLUDE_DIR "vendor/spdlog/include")
-include_directories(SYSTEM "${SPDLOG_INCLUDE_DIR}")
+add_custom_target(spdlog)
+add_dependencies(${FASTLIB} spdlog)
+set(SPDLOG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/spdlog/include")
+#include_directories(SYSTEM "${SPDLOG_INCLUDE_DIR}")
+add_custom_command(
+	TARGET spdlog
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E create_symlink "${SPDLOG_INCLUDE_DIR}/spdlog" "${EXTERNAL_INCLUDES}/fast-lib/external/spdlog")
 
 # Install headers
 install(DIRECTORY "${SPDLOG_INCLUDE_DIR}/" DESTINATION include/fast-lib/external)

@@ -12,6 +12,11 @@ endif()
 if(POLICY CMP0015)
 	cmake_policy(SET CMP0015 OLD)
 endif()
+# see https://cmake.org/cmake/help/latest/policy/CMP0042.html
+if(POLICY CMP0042)
+	# Enable MACOSX_RPATH by default.
+	cmake_policy(SET CMP0042 NEW)
+endif()
 
 include(CheckCXXCompilerFlag)
 
@@ -147,10 +152,11 @@ if(WIN32)
 	endif()
 endif()
 
-# GCC or Clang specialities
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
-   "${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel" OR
-   "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+# GCC or Clang or Intel Compiler specialities
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR
+   CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+   CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+
 	### General stuff
 	if(WIN32)
 		set(CMAKE_SHARED_LIBRARY_PREFIX "")	# DLLs do not have a "lib" prefix
@@ -218,13 +224,14 @@ if(MSVC)
 		endif()
 
 		# correct linker options
-		foreach(flag_var  yaml_c_flags  yaml_cxx_flags)
+		foreach(flag_var  CMAKE_C_FLAGS  CMAKE_CXX_FLAGS)
 			foreach(config_name  ""  DEBUG  RELEASE  MINSIZEREL  RELWITHDEBINFO)
 				set(var_name "${flag_var}")
 				if(NOT "${config_name}" STREQUAL "")
 					set(var_name "${var_name}_${config_name}")
 				endif()
 				string(REPLACE "/MD" "${LIB_RT_OPTION}" ${var_name} "${${var_name}}")
+				set(${var_name} "${${var_name}}" CACHE STRING "" FORCE)
 			endforeach()
 		endforeach()
 	endif()
@@ -257,15 +264,15 @@ else()
 	set(_library_dir lib)
 endif()
 
-set(INCLUDE_INSTALL_ROOT_DIR include)
+set(INCLUDE_INSTALL_ROOT_DIR ${CMAKE_INSTALL_PREFIX}/include)
 
 set(INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_ROOT_DIR}/yaml-cpp)
-set(LIB_INSTALL_DIR "${_library_dir}${LIB_SUFFIX}")
+set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${_library_dir}${LIB_SUFFIX}")
 
 set(_INSTALL_DESTINATIONS
-	RUNTIME DESTINATION bin
+	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-	ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+	ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}"
 )
 
 
@@ -301,7 +308,7 @@ if(MSVC)
 	endif()
 endif()
 
-install(TARGETS yaml-cpp ${_INSTALL_DESTINATIONS})
+install(TARGETS yaml-cpp EXPORT yaml-cpp-targets ${_INSTALL_DESTINATIONS})
 install(
 	DIRECTORY ${header_directory}
 	DESTINATION ${INCLUDE_INSTALL_DIR}
@@ -317,8 +324,26 @@ set(EXPORT_TARGETS yaml-cpp CACHE INTERNAL "export targets")
 set(CONFIG_INCLUDE_DIRS "${YAML_CPP_SOURCE_DIR}/include")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp-config.cmake.in
 	"${PROJECT_BINARY_DIR}/yaml-cpp-config.cmake" @ONLY)
+
+if(WIN32 AND NOT CYGWIN)
+	set(INSTALL_CMAKE_DIR ${CMAKE_INSTALL_PREFIX}/CMake)
+else()
+	set(INSTALL_CMAKE_DIR ${LIB_INSTALL_DIR}/cmake/yaml-cpp)
+endif()
+
+file(RELATIVE_PATH REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}" "${INCLUDE_INSTALL_ROOT_DIR}")
+set(CONFIG_INCLUDE_DIRS "\${YAML_CPP_CMAKE_DIR}/${REL_INCLUDE_DIR}")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp-config.cmake.in
+	"${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/yaml-cpp-config.cmake" @ONLY)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp-config-version.cmake.in
 	"${PROJECT_BINARY_DIR}/yaml-cpp-config-version.cmake" @ONLY)
+
+install(FILES
+	"${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/yaml-cpp-config.cmake"
+	"${PROJECT_BINARY_DIR}/yaml-cpp-config-version.cmake"
+	DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)
+install(EXPORT yaml-cpp-targets DESTINATION ${INSTALL_CMAKE_DIR})
 
 if(UNIX)
 	set(PC_FILE ${CMAKE_BINARY_DIR}/yaml-cpp.pc)

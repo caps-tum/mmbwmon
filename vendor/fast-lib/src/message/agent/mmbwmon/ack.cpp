@@ -13,7 +13,7 @@ YAML::Node ack::emit() const
 	return node;
 }
 
-void ack::load(const YAML::Node &node)
+void ack::load(const YAML::Node &/*node*/)
 {
 }
 

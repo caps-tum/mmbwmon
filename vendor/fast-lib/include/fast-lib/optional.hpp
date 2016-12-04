@@ -46,6 +46,8 @@ public:
 	T & get();
 	const T & get() const;
 
+	std::string get_tag() const;
+
 	void set(const T &rhs);
 	void set(T &&rhs);
 
@@ -170,6 +172,12 @@ const T & Optional<T>::get() const
 	if (!valid)
 		throw std::runtime_error("Optional value not valid.");
 	return *ptr;
+}
+
+template<typename T>
+std::string Optional<T>::get_tag() const
+{
+	return tag;
 }
 
 template<typename T>
