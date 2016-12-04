@@ -152,152 +152,152 @@ int mosquittopp::reinitialise(const char *id, bool clean_session)
 	return rc;
 }
 
-int mosquittopp::connect(const char *host, int port, int keepalive)
+int mosquittopp::connect(const char *host, int port, int keepalive) const
 {
 	return mosquitto_connect(m_mosq, host, port, keepalive);
 }
 
-int mosquittopp::connect(const char *host, int port, int keepalive, const char *bind_address)
+int mosquittopp::connect(const char *host, int port, int keepalive, const char *bind_address) const
 {
 	return mosquitto_connect_bind(m_mosq, host, port, keepalive, bind_address);
 }
 
-int mosquittopp::connect_async(const char *host, int port, int keepalive)
+int mosquittopp::connect_async(const char *host, int port, int keepalive) const
 {
 	return mosquitto_connect_async(m_mosq, host, port, keepalive);
 }
 
-int mosquittopp::connect_async(const char *host, int port, int keepalive, const char *bind_address)
+int mosquittopp::connect_async(const char *host, int port, int keepalive, const char *bind_address) const
 {
 	return mosquitto_connect_bind_async(m_mosq, host, port, keepalive, bind_address);
 }
 
-int mosquittopp::reconnect()
+int mosquittopp::reconnect() const
 {
 	return mosquitto_reconnect(m_mosq);
 }
 
-int mosquittopp::reconnect_async()
+int mosquittopp::reconnect_async() const
 {
 	return mosquitto_reconnect_async(m_mosq);
 }
 
-int mosquittopp::disconnect()
+int mosquittopp::disconnect() const
 {
 	return mosquitto_disconnect(m_mosq);
 }
 
-int mosquittopp::socket()
+int mosquittopp::socket() const
 {
 	return mosquitto_socket(m_mosq);
 }
 
-int mosquittopp::will_set(const char *topic, int payloadlen, const void *payload, int qos, bool retain)
+int mosquittopp::will_set(const char *topic, int payloadlen, const void *payload, int qos, bool retain) const
 {
 	return mosquitto_will_set(m_mosq, topic, payloadlen, payload, qos, retain);
 }
 
-int mosquittopp::will_clear()
+int mosquittopp::will_clear() const
 {
 	return mosquitto_will_clear(m_mosq);
 }
 
-int mosquittopp::username_pw_set(const char *username, const char *password)
+int mosquittopp::username_pw_set(const char *username, const char *password) const
 {
 	return mosquitto_username_pw_set(m_mosq, username, password);
 }
 
-int mosquittopp::publish(int *mid, const char *topic, int payloadlen, const void *payload, int qos, bool retain)
+int mosquittopp::publish(int *mid, const char *topic, int payloadlen, const void *payload, int qos, bool retain) const
 {
 	return mosquitto_publish(m_mosq, mid, topic, payloadlen, payload, qos, retain);
 }
 
-void mosquittopp::reconnect_delay_set(unsigned int reconnect_delay, unsigned int reconnect_delay_max, bool reconnect_exponential_backoff)
+void mosquittopp::reconnect_delay_set(unsigned int reconnect_delay, unsigned int reconnect_delay_max, bool reconnect_exponential_backoff) const
 {
 	mosquitto_reconnect_delay_set(m_mosq, reconnect_delay, reconnect_delay_max, reconnect_exponential_backoff);
 }
 
-int mosquittopp::max_inflight_messages_set(unsigned int max_inflight_messages)
+int mosquittopp::max_inflight_messages_set(unsigned int max_inflight_messages) const
 {
 	return mosquitto_max_inflight_messages_set(m_mosq, max_inflight_messages);
 }
 
-void mosquittopp::message_retry_set(unsigned int message_retry)
+void mosquittopp::message_retry_set(unsigned int message_retry) const
 {
 	mosquitto_message_retry_set(m_mosq, message_retry);
 }
 
-int mosquittopp::subscribe(int *mid, const char *sub, int qos)
+int mosquittopp::subscribe(int *mid, const char *sub, int qos) const
 {
 	return mosquitto_subscribe(m_mosq, mid, sub, qos);
 }
 
-int mosquittopp::unsubscribe(int *mid, const char *sub)
+int mosquittopp::unsubscribe(int *mid, const char *sub) const
 {
 	return mosquitto_unsubscribe(m_mosq, mid, sub);
 }
 
-int mosquittopp::loop(int timeout, int max_packets)
+int mosquittopp::loop(int timeout, int max_packets) const
 {
 	return mosquitto_loop(m_mosq, timeout, max_packets);
 }
 
-int mosquittopp::loop_misc()
+int mosquittopp::loop_misc() const
 {
 	return mosquitto_loop_misc(m_mosq);
 }
 
-int mosquittopp::loop_read(int max_packets)
+int mosquittopp::loop_read(int max_packets) const
 {
 	return mosquitto_loop_read(m_mosq, max_packets);
 }
 
-int mosquittopp::loop_write(int max_packets)
+int mosquittopp::loop_write(int max_packets) const
 {
 	return mosquitto_loop_write(m_mosq, max_packets);
 }
 
-int mosquittopp::loop_forever(int timeout, int max_packets)
+int mosquittopp::loop_forever(int timeout, int max_packets) const
 {
 	return mosquitto_loop_forever(m_mosq, timeout, max_packets);
 }
 
-int mosquittopp::loop_start()
+int mosquittopp::loop_start() const
 {
 	return mosquitto_loop_start(m_mosq);
 }
 
-int mosquittopp::loop_stop(bool force)
+int mosquittopp::loop_stop(bool force) const
 {
 	return mosquitto_loop_stop(m_mosq, force);
 }
 
-bool mosquittopp::want_write()
+bool mosquittopp::want_write() const
 {
 	return mosquitto_want_write(m_mosq);
 }
 
-void mosquittopp::user_data_set(void *userdata)
+void mosquittopp::user_data_set(void *userdata) const
 {
 	mosquitto_user_data_set(m_mosq, userdata);
 }
 
-int mosquittopp::tls_set(const char *cafile, const char *capath, const char *certfile, const char *keyfile, int (*pw_callback)(char *buf, int size, int rwflag, void *userdata))
+int mosquittopp::tls_set(const char *cafile, const char *capath, const char *certfile, const char *keyfile, int (*pw_callback)(char *buf, int size, int rwflag, void *userdata)) const
 {
 	return mosquitto_tls_set(m_mosq, cafile, capath, certfile, keyfile, pw_callback);
 }
 
-int mosquittopp::tls_opts_set(int cert_reqs, const char *tls_version, const char *ciphers)
+int mosquittopp::tls_opts_set(int cert_reqs, const char *tls_version, const char *ciphers) const
 {
 	return mosquitto_tls_opts_set(m_mosq, cert_reqs, tls_version, ciphers);
 }
 
-int mosquittopp::tls_insecure_set(bool value)
+int mosquittopp::tls_insecure_set(bool value) const
 {
 	return mosquitto_tls_insecure_set(m_mosq, value);
 }
 
-int mosquittopp::tls_psk_set(const char *psk, const char *identity, const char *ciphers)
+int mosquittopp::tls_psk_set(const char *psk, const char *identity, const char *ciphers) const
 {
 	return mosquitto_tls_psk_set(m_mosq, psk, identity, ciphers);
 }

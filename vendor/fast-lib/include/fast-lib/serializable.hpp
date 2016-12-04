@@ -100,3 +100,12 @@ namespace YAML
 		};\
 	};
 #endif
+
+namespace fast {
+namespace yaml {
+
+// merges rhs into lhs
+void merge_node(YAML::Node &lhs, const YAML::Node &rhs);
+
+}
+}

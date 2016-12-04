@@ -30,14 +30,14 @@ public:
 	 *
 	 * A pure virtual method to provide an interface to send a message.
 	 */
-	virtual void send_message(const std::string &message) = 0;
+	virtual void send_message(const std::string &message) const = 0;
 	/**
 	 * \brief Method to get a message.
 	 *
 	 * A pure virtual method to provide an interface to receive a message.
 	 * This is a blocking method which waits for a message.
 	 */
-	virtual std::string get_message() = 0;
+	virtual std::string get_message(std::string *actual_topic = nullptr) const = 0;
 };
 
 } // namespace fast

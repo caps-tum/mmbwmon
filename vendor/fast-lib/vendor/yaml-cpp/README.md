@@ -1,9 +1,8 @@
-# yaml-cpp
+# yaml-cpp [![Build Status](https://travis-ci.org/jbeder/yaml-cpp.svg?branch=master)](https://travis-ci.org/jbeder/yaml-cpp) [![Documentation](https://codedocs.xyz/jbeder/yaml-cpp.svg)](https://codedocs.xyz/jbeder/yaml-cpp/)
 
 yaml-cpp is a [YAML](http://www.yaml.org/) parser and emitter in C++ matching the [YAML 1.2 spec](http://www.yaml.org/spec/1.2/spec.html).
 
 To get a feel for how it can be used, see the [Tutorial](https://github.com/jbeder/yaml-cpp/wiki/Tutorial) or [How to Emit YAML](https://github.com/jbeder/yaml-cpp/wiki/How-To-Emit-YAML). For the old API (version < 0.5.0), see [How To Parse A Document](https://github.com/jbeder/yaml-cpp/wiki/How-To-Parse-A-Document-(Old-API)).
-
 
 # Problems? #
 
@@ -31,7 +30,7 @@ cmake [-G generator] [-DBUILD_SHARED_LIBS=ON|OFF] ..
 ```
 
   * The `generator` is whatever type of build system you'd like to use. To see a full list of generators on your platform, just run `cmake` (with no arguments). For example:
-    * On Windows, you might use "Visual Studio 12 2013" to generate a Visual Studio 2013 solution
+    * On Windows, you might use "Visual Studio 12 2013" to generate a Visual Studio 2013 solution or "Visual Studio 14 2015 Win64" to generate a 64-bit Visual Studio 2015 solution.
     * On OS X, you might use "Xcode" to generate an Xcode project
     * On a UNIX-y system, simply omit the option to generate a makefile
 
