@@ -39,7 +39,7 @@ void cgroup_add_me(const char *name);
 /**
  * Adds the thread/process with @p pid to the cgroup @p name.
  */
-void cgroup_add_task(const char *name, const pid_t pid);
+void cgroup_add_task(const char *name, pid_t tid);
 
 /**
  * Allows the @p cpus to be used in the cgroup @p name. @p size is the
