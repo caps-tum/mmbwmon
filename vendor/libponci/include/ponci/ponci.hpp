@@ -16,6 +16,10 @@
 #ifndef ponci_hpp
 #define ponci_hpp
 
+#include <ctime>
+#include <string>
+#include <vector>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,9 +29,6 @@ extern "C" {
 /* Start of the C++ only functions. */
 #ifdef __cplusplus
 } /* end extern "C" */
-
-#include <string>
-#include <vector>
 
 inline void cgroup_create(const std::string &name) { cgroup_create(name.c_str()); }
 
