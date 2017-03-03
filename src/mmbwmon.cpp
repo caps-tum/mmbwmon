@@ -2,6 +2,7 @@
 #include <string>
 #include <thread>
 
+#include <cstdlib>
 #include <cstring>
 
 #include <distgen/distgen.h>
@@ -88,7 +89,6 @@ static void parse_options(size_t argc, const char **argv) {
 		}
 		if (arg == "--measure-only") {
 			measure_only = true;
-			++i;
 			continue;
 		}
 	}
@@ -98,13 +98,31 @@ static void parse_options(size_t argc, const char **argv) {
 
 static void print_distgen_results(distgend_initT distgen_init) {
 	assert(distgen_init.number_of_threads / distgen_init.SMT_factor - 1 < DISTGEN_MAXTHREADS);
+
+	std::string gnuplot_command = "echo \"";
 	distgend_configT config;
+
 	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
 		config.number_of_threads = i + 1;
 		config.threads_to_use[i] = i;
 		std::cout << "Using " << i + 1 << " threads:" << std::endl;
 		std::cout << "\tMaximum: " << distgend_get_max_bandwidth(config) << " GByte/s" << std::endl;
 		std::cout << std::endl;
+
+		gnuplot_command += std::to_string(i + 1) + " ";
+		gnuplot_command += std::to_string(distgend_get_max_bandwidth(config)) + "\n";
+	}
+
+	gnuplot_command += "\"| gnuplot -e \"set terminal dumb; set ytics nomirror; set xtics 1,1," +
+					   std::to_string(distgen_init.number_of_threads) + " nomirror; set yrange [0:]; set border 3; set "
+																		"xlabel 'threads'; set ylabel 'BW'; plot '-' "
+																		"with lines notitle;\"";
+
+	int err = system(gnuplot_command.c_str());
+	if (err != 0) {
+		std::cout << "Could not generate plot. Feel free to execute " << std::endl;
+		std::cout << gnuplot_command << std::endl;
+		std::cout << "on a system with gnuplot installed.";
 	}
 }
 
