@@ -21,6 +21,7 @@
 
 /*** config vars **/
 static distgend_initT distgen_init;
+static bool measure_only = false;
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
@@ -30,6 +31,7 @@ static distgend_initT distgen_init;
 	std::cout << "\t --threads \t Number of logical cores. \t\t\t Default: " << std::thread::hardware_concurrency()
 			  << "\n";
 	std::cout << "\t --smt \t\t Number of logical cores per physical core. \t Default: 2\n";
+	std::cout << "\t --measure-only  Only runs the initialization measurements. \t Default: false\n";
 	exit(0);
 }
 
@@ -84,9 +86,14 @@ static void parse_options(size_t argc, const char **argv) {
 			++i;
 			continue;
 		}
+		if (arg == "--measure-only") {
+			measure_only = true;
+			++i;
+			continue;
+		}
 	}
 
-	if (server == "") print_help(argv[0]);
+	if (server == "" && !measure_only) print_help(argv[0]);
 }
 
 static void print_distgen_results(distgend_initT distgen_init) {
@@ -112,8 +119,8 @@ static void print_distgen_results(distgend_initT distgen_init) {
 
 		distgend_configT dc;
 		dc.number_of_threads = req.cores.size();
-		for (int i = 0; i < req.cores.size(); ++i) {
-			dc.threads_to_use[i] = req.cores[i];
+		for (size_t i = 0; i < req.cores.size(); ++i) {
+			dc.threads_to_use[i] = static_cast<unsigned char>(req.cores[i]);
 			std::cout << static_cast<int>(dc.threads_to_use[i]) << ", ";
 		}
 
@@ -173,6 +180,8 @@ int main(int argc, char const *argv[]) {
 	std::cout << " done!\n\n";
 
 	print_distgen_results(distgen_init);
+
+	if (measure_only) return 0;
 
 	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/response", server,
 								 static_cast<int>(port), 60);
