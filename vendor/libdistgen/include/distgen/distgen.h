@@ -19,8 +19,7 @@ extern "C" {
 #include <stddef.h>
 #endif
 
-#define DISTGEN_MAXTHREADS 64
-#define DISTGEN_CGROUP_NAME "distgend"
+#define DISTGEN_MAXTHREADS 255
 
 typedef struct {
 	size_t number_of_threads;
@@ -48,9 +47,26 @@ void distgend_init(distgend_initT init);
 double distgend_is_membound(distgend_configT config);
 
 /**
+ * Scales a value returned by distgend_is_membound
+ * - ~1   == no load on the memory system and
+ * - ~0 == memory system fully utilized
+ */
+double distgend_scale(distgend_configT config, double input);
+
+/**
+ * Identical to distgend_scale(distgend_is_membound)
+ */
+double distgend_is_membound_scaled(distgend_configT config);
+
+/**
  * Returns the GB/s expected for the giving config if the system is idle.
  */
 double distgend_get_max_bandwidth(distgend_configT config);
+
+/**
+ * Returns the GB/s measured for core_num cores. Uses compact pinning on cores, not HTCs.
+ */
+double distgend_get_measured_idle_bandwidth(size_t core_num);
 
 #ifdef __cplusplus
 }

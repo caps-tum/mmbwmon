@@ -12,7 +12,6 @@
 #include "distgen/distgen.h"
 
 #include <assert.h>
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -24,22 +23,22 @@ static pthread_t threads[DISTGEN_MAXTHREADS];
 static pthread_attr_t thread_attr[DISTGEN_MAXTHREADS];
 
 // make sure that gcd(size,diff) is 1 by increasing size, return size
-static int adjustSize(u64 size, u64 diff);
+static u64 adjustSize(u64 size, u64 diff);
 
-u64 distSize[MAXDISTCOUNT];
-u64 distBlocks[MAXDISTCOUNT];
-int distIter[MAXDISTCOUNT];
+static u64 distSize[MAXDISTCOUNT];
+static u64 distBlocks[MAXDISTCOUNT];
+static u64 distIter[MAXDISTCOUNT];
 
 struct entry *buffer[DISTGEN_MAXTHREADS];
 
 // options (to be reset to default if 0)
-int distsUsed = 0;
+static int distsUsed = 0;
 size_t tcount = 1; // number of threads to use (default: 1)
 int pseudoRandom = 0;
 int depChain = 0;
 int doWrite = 0;
 size_t iter = 0;
-int verbose = 0;
+static int verbose = 0;
 
 static u64 blocks, blockDiff;
 
@@ -84,18 +83,19 @@ void addDist(u64 size) {
 }
 
 static void *init_memory_per_thread(void *arg) {
-	size_t tid = *((size_t*)arg);
+	size_t tid = *static_cast<size_t *>(arg);
 	struct entry *buf;
 	u64 idx, blk, nextIdx;
-	u64 idxMax = blocks * BLOCKLEN / sizeof(struct entry);
-	u64 idxIncr = blockDiff * BLOCKLEN / sizeof(struct entry);
+	u64 idxMax = blocks * BLOCKLEN / sizeof(entry);
+	u64 idxIncr = blockDiff * BLOCKLEN / sizeof(entry);
 
 	// allocate and initialize used memory
-	buffer[tid] = (struct entry *)memalign(64, blocks * BLOCKLEN);
+	int err = posix_memalign((void **)&buffer[tid], 64, blocks * BLOCKLEN);
+	assert(err == 0);
 	buf = buffer[tid];
 	assert(buf != nullptr);
 	for (idx = 0; idx < idxMax; idx++) {
-		buf[idx].v = (double)idx;
+		buf[idx].v = static_cast<double>(idx);
 		buf[idx].next = 0;
 	}
 
@@ -120,13 +120,13 @@ void initBufs() {
 	for (int d = 0; d < distsUsed; d++) {
 		// each memory block of cacheline size gets accessed
 		distBlocks[d] = (distSize[d] + BLOCKLEN - 1) / BLOCKLEN;
-		distIter[d] = (int)(distSize[0] / distSize[d]);
+		distIter[d] = distSize[0] / distSize[d];
 	}
 
 	if (verbose) {
 		fprintf(stderr, "  number of distances: %d\n", distsUsed);
 		for (int d = 0; d < distsUsed; d++)
-			fprintf(stderr, "    D%2d: size %llu (%d traversals per iteration)\n", d + 1, distSize[d], distIter[d]);
+			fprintf(stderr, "    D%2d: size %llu (%llu traversals per iteration)\n", d + 1, distSize[d], distIter[d]);
 	}
 
 	blocks = (distSize[0] + BLOCKLEN - 1) / BLOCKLEN;
@@ -152,30 +152,28 @@ void initBufs() {
 
 	// initialize buffers in general
 	size_t thread_ids[tcount];
-	for (size_t i = 0; i<tcount; i++) {
+	for (size_t i = 0; i < tcount; i++) {
 		thread_ids[i] = i;
-		int res = pthread_create(&threads[i],
-		    			 &thread_attr[i],
-		                         init_memory_per_thread, &thread_ids[i]);
+		int res = pthread_create(&threads[i], &thread_attr[i], init_memory_per_thread, &thread_ids[i]);
 		assert(res == 0);
 	}
-	
-	for (size_t i = 0; i<tcount; i++) {
+
+	for (size_t i = 0; i < tcount; i++) {
 		int res = pthread_join(threads[i], NULL);
 		assert(res == 0);
 	}
 }
 
 // helper for adjustSize
-static int gcd(u64 a, u64 b) {
+static u64 gcd(u64 a, u64 b) {
 	if (b == 0) return a;
 	return gcd(b, a % b);
 }
 
 // make sure that gcd(size,diff) is 1 by increasing size, return size
-static int adjustSize(u64 size, u64 diff) {
+static u64 adjustSize(u64 size, u64 diff) {
 	while (gcd(size, diff) > 1) size++;
-	return (int)size;
+	return size;
 }
 
 void runBench(struct entry *buffer, size_t iter, int depChain, int doWrite, double *sum, u64 *aCount) {

@@ -10,9 +10,6 @@
 #include "distgen/distgen.h"
 #include "distgen/distgen_internal.h"
 
-//#define _GNU_SOURCE
-//#define __USE_GNU
-
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -76,7 +73,7 @@ void distgend_init(distgend_initT init) {
 
 	// fill distgen_mem_bw_results
 	distgend_configT config;
-	for (unsigned char i = 0; i < init.number_of_threads / init.NUMA_domains; ++i) {
+	for (unsigned char i = 0; i < init.number_of_threads / init.SMT_factor; ++i) {
 		config.number_of_threads = i + 1;
 		config.threads_to_use[i] = i;
 
@@ -93,6 +90,7 @@ double distgend_get_max_bandwidth(distgend_configT config) {
 	double res = 0.0;
 
 	size_t cores_per_numa_domain[DISTGEN_MAXTHREADS];
+	assert(system_config.NUMA_domains < DISTGEN_MAXTHREADS);
 	for (size_t i = 0; i < system_config.NUMA_domains; ++i) cores_per_numa_domain[i] = 0;
 
 	// for every NUMA domain we use
@@ -112,6 +110,11 @@ double distgend_get_max_bandwidth(distgend_configT config) {
 	return res;
 }
 
+double distgend_get_measured_idle_bandwidth(size_t core_num) {
+	assert(core_num - 1 < system_config.number_of_threads / system_config.SMT_factor);
+	return distgen_mem_bw_results[core_num - 1];
+}
+
 double distgend_is_membound(distgend_configT config) {
 	// run benchmark on given cores
 	// compare the result with distgend_get_max_bandwidth();
@@ -122,14 +125,44 @@ double distgend_is_membound(distgend_configT config) {
 	return (res > 1.0) ? 1.0 : res;
 }
 
+double distgend_scale(distgend_configT config, double input) {
+	// there is no need to scale the value if all cores have been used to run distgen
+	if (config.number_of_threads == system_config.number_of_threads) return input;
+
+	// we scale the value based on the following idea:
+	// distgen only reads from memory during measurements.
+	// the other application typically uses read + write from memory
+	// the hardware treats reads and write entries in the memory controller
+	// queue identical
+	// in use : measured => minimum value returned by distgen_is_membound
+	// 1 : 1 => 1 / (2 + 1) => 0.33 minimum
+	// 1 : 2 => 2*1 / (2 + 2*1) => 0.55
+	// 2 : 1 => 1 / (2*2 +1) => 0.2
+	const size_t in_use = system_config.number_of_threads / system_config.SMT_factor - config.number_of_threads;
+	const double min = static_cast<double>(config.number_of_threads) / (2.0 * in_use + config.number_of_threads);
+	const double max = 1;
+
+	if (input > 1.0) input = 1.0;
+	if (input < min) input = min;
+
+	//        (1 - 0)(x - min)
+	// f(x) = ----------------  + 0
+	//            max - min
+	return (input - min) / (max - min);
+}
+
+double distgend_is_membound_scaled(distgend_configT config) {
+	return distgend_scale(config, distgend_is_membound(config));
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // INTERNAL FUNCTIONS
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void *thread_benchmark(void *arg) {
-	thread_argsT *thread_args = (thread_argsT*)arg;
-	double *ret = (double*)calloc(1, sizeof(double));
-	
+	thread_argsT *thread_args = (thread_argsT *)arg;
+	double *ret = (double *)calloc(1, sizeof(double));
+
 	pthread_barrier_wait(&barrier);
 	for (size_t i = 0; i < thread_args->config->number_of_threads; ++i) {
 		if (thread_args->tid == thread_args->config->threads_to_use[i]) {
@@ -145,38 +178,33 @@ static void *thread_benchmark(void *arg) {
 		}
 	}
 
-	pthread_exit((void*)ret);
+	pthread_exit((void *)ret);
 }
-
 
 static double bench(distgend_configT config) {
 	double ret = 0.0;
-	
+
 	thread_argsT thread_args[system_config.number_of_threads];
-	
+
 	// inititalize barrier
-	int res = pthread_barrier_init(&barrier, 
-	    			       NULL,
-				       system_config.number_of_threads);
+	int res = pthread_barrier_init(&barrier, NULL, system_config.number_of_threads);
 	assert(res == 0);
-	
-	for (size_t i = 0; i<system_config.number_of_threads; ++i) {
+
+	for (size_t i = 0; i < system_config.number_of_threads; ++i) {
 		thread_args[i].tid = i;
 		thread_args[i].config = &config;
-		int res = pthread_create(&threads[i],
-		    			 &thread_attr[i],
-		                         thread_benchmark, &thread_args[i]);
+		int res = pthread_create(&threads[i], &thread_attr[i], thread_benchmark, &thread_args[i]);
 		assert(res == 0);
 	}
-	
-	for (size_t i = 0; i<system_config.number_of_threads; ++i) {
+
+	for (size_t i = 0; i < system_config.number_of_threads; ++i) {
 		double *ret_tmp;
-		int res = pthread_join(threads[i], (void**)&ret_tmp);
+		int res = pthread_join(threads[i], (void **)&ret_tmp);
 		assert(res == 0);
 		ret += *ret_tmp;
-		free (ret_tmp);
+		free(ret_tmp);
 	}
-	
+
 	// destroy barrier
 	res = pthread_barrier_destroy(&barrier);
 	assert(res == 0);
@@ -187,31 +215,22 @@ static double bench(distgend_configT config) {
 static void set_affinity(distgend_initT init) {
 	size_t *arr = (size_t *)malloc(sizeof(size_t) * init.number_of_threads);
 
-	const size_t phys_cores_per_numa = init.number_of_threads / (init.NUMA_domains * init.SMT_factor);
-
-	size_t i = 0;
-
-	for (size_t n = 0; n < init.NUMA_domains; ++n) {
-		size_t next_core = n * phys_cores_per_numa;
-		for (size_t s = 0; s < init.SMT_factor; ++s) {
-			for (size_t c = 0; c < phys_cores_per_numa; ++c) {
-				arr[i] = next_core;
-				++next_core;
-				++i;
-			}
-			next_core += phys_cores_per_numa * (init.NUMA_domains - 1);
-		}
+	// binding is created as following
+	// say we have 2 NUMA * 4 cores * 2 SMT
+	// 0-3  = 0. HTC on NUMA 0
+	// 4-7  = 0. HTC on NUMA 1
+	// 8-11 = 1. HTC on NUMA 1
+	// ...
+	for (size_t i = 0; i < init.number_of_threads; ++i) {
+		arr[i] = i;
 	}
-	assert(i == init.number_of_threads);
 
 	// set thread affinity
-	for (size_t i = 0; i<init.number_of_threads; ++i) {
+	for (size_t i = 0; i < init.number_of_threads; ++i) {
 		cpu_set_t set;
 		CPU_ZERO(&set);
 		CPU_SET(arr[i], &set);
-		int res = pthread_attr_setaffinity_np(&thread_attr[i],
-						      sizeof(cpu_set_t),
-						      &set);
+		int res = pthread_attr_setaffinity_np(&thread_attr[i], sizeof(cpu_set_t), &set);
 		assert(res == 0);
 	}
 

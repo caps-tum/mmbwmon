@@ -15,8 +15,6 @@ string( TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE )
 ########
 # General project settings
 project(distgend)
-# Enable support for external projects
-include(ExternalProject)
 ########
 
 ########

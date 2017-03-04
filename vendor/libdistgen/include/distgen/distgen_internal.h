@@ -27,19 +27,13 @@ struct entry {
 	struct entry *next;
 };
 
-extern u64 distSize[MAXDISTCOUNT];
-extern u64 distBlocks[MAXDISTCOUNT];
-extern int distIter[MAXDISTCOUNT];
-
 extern struct entry *buffer[DISTGEN_MAXTHREADS];
 
-extern int distsUsed;
 extern size_t tcount;
 extern int pseudoRandom;
 extern int depChain;
 extern int doWrite;
 extern size_t iter;
-extern int verbose;
 
 double wtime(void);
 

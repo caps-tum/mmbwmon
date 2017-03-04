@@ -117,14 +117,15 @@ static void print_distgen_results(distgend_initT distgen_init) {
 	distgend_configT config;
 	std::string gnuplot_data;
 
+	std::cout << "threads\t\tmeasured (GByte/s)\tcalculated (GByte/s)" << std::endl;
 	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
 		config.number_of_threads = i + 1;
 		config.threads_to_use[i] = i;
-		std::cout << "Using " << i + 1 << " threads:" << std::endl;
-		std::cout << "\tMaximum: " << distgend_get_max_bandwidth(config) << " GByte/s" << std::endl;
-		std::cout << std::endl;
+		std::cout << i + 1 << "\t\t" << distgend_get_measured_idle_bandwidth(i + 1) << "\t\t\t"
+				  << distgend_get_max_bandwidth(config) << std::endl;
 
 		gnuplot_data += std::to_string(i + 1) + " ";
+		gnuplot_data += std::to_string(distgend_get_measured_idle_bandwidth(i + 1)) + " ";
 		gnuplot_data += std::to_string(distgend_get_max_bandwidth(config)) + "\n";
 	}
 
@@ -142,6 +143,7 @@ static void print_distgen_results(distgend_initT distgen_init) {
 	}
 
 	if (home_dir_available && gnuplot_file.is_open()) {
+		gnuplot_file << "#cores measured calculated" << std::endl;
 		gnuplot_file << gnuplot_data;
 		gnuplot_file.close();
 	}

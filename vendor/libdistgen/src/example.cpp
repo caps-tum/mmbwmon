@@ -16,8 +16,8 @@
 int main() {
 	distgend_initT init;
 	init.SMT_factor = 1;
-	init.NUMA_domains = 2;
-	init.number_of_threads = 16;
+	init.NUMA_domains = 1;
+	init.number_of_threads = 4;
 
 	std::cout << "Starting distgen initialization ...";
 	std::cout.flush();
@@ -28,9 +28,11 @@ int main() {
 	for (size_t i = 0; i < init.number_of_threads; ++i) {
 		config.number_of_threads = i + 1;
 		config.threads_to_use[i] = static_cast<unsigned char>(i);
+		const double res = distgend_is_membound(config);
 		std::cout << "Using " << i + 1 << " threads:" << std::endl;
 		std::cout << "\tMaximum: " << distgend_get_max_bandwidth(config) << " GByte/s" << std::endl;
-		std::cout << "\tPortion currently available: " << distgend_is_membound(config) << std::endl;
+		std::cout << "\tPortion currently available: " << res << std::endl;
+		std::cout << "\tPortion currently available (scaled): " << distgend_scale(config, res) << std::endl;
 		std::cout << std::endl;
 	}
 }
