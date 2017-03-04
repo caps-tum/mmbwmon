@@ -1,10 +1,79 @@
-language: cpp
+sudo: true
 dist: trusty
-sudo: required
+language: cpp
 
-compiler:
-    - clang
-    - gcc
+matrix:
+  include:
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+      env:
+          - COMPILERCXX=g++-4.9
+          - COMPILERC=gcc-4.9
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+          - COMPILERCXX=g++-5
+          - COMPILERC=gcc-5
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+          - COMPILERCXX=g++-6
+          - COMPILERC=gcc-6
+    - compiler: clang
+      env:
+          - COMPILERC=clang
+          - CLANGV=3.6.2
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+    - compiler: clang
+      env:
+          - COMPILERC=clang
+          - CLANGV=3.7.1
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+    - compiler: clang
+      env:
+          - COMPILERC=clang
+          - CLANGV=3.8.1
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+    - compiler: clang
+      env:
+          - COMPILERC=clang
+          - CLANGV=3.9.0
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
 
 branches:
   only:
@@ -12,24 +81,20 @@ branches:
     - sp/travis
 
 before_install:
-    - travis_retry sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-    - travis_retry sudo apt-get update -y
-
-install:
-    - travis_retry sudo apt-get -f install -y aptitude
-    - travis_retry sudo aptitude -f install -y cmake
-    - travis_retry sudo aptitude -f install -y gcc-4.9 g++-4.9
-    - travis_retry sudo aptitude -f install -y mosquitto
-    - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
-    - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
-    - sudo update-alternatives --config gcc
-    - sudo update-alternatives --config g++
+  - travis_retry sudo add-apt-repository -y ppa:george-edison55/cmake-3.x
+  - travis_retry sudo apt-get update -qq
+  - travis_retry sudo apt-get install cmake uuid-dev mosquitto
+  - mkdir $HOME/clang+llvm
+  - export PATH=$HOME/clang+llvm/bin:$PATH
+  - if [ -n "$CLANGV" ]; then wget http://llvm.org/releases/$CLANGV/clang+llvm-$CLANGV-x86_64-linux-gnu-ubuntu-14.04.tar.xz -O $HOME/clang+llvm.tar.xz; fi
+  - if [ -n "$CLANGV" ]; then tar xf $HOME/clang+llvm.tar.xz -C $HOME/clang+llvm --strip-components 1; fi
 
 script:
     - mkdir build
     - cd build
-    - cmake ..
+    - cmake -DCMAKE_CXX_COMPILER=$COMPILERCXX -DCMAKE_C_COMPILER=$COMPILERC -DCMAKE_INSTALL_PREFIX=/tmp/ ..
     - make
+    - make install
     - travis_retry ./test/fastlib_communication_test -v
     - travis_retry ./test/fastlib_task_test -v
 
@@ -40,6 +105,3 @@ notifications:
   email:
     on_success: change
     on_failure: always
-
-os:
-  - linux

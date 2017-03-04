@@ -40,6 +40,11 @@ typedef struct {
 void distgend_init(distgend_initT init);
 
 /**
+ * This function initializes the daemon with previous benchmark results.
+ */
+void distgend_init_without_bench(distgend_initT init, const double *const membw);
+
+/**
  * Return a values in the range of ~[0-1] with
  * - ~1   == no load on the memory system and
  * - ~0.3 == memory system fully utilized

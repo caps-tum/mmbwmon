@@ -22,6 +22,9 @@ namespace fast
 	{
 //		friend struct convert<Serializable>;
 	public:
+ 		Serializable() = default;
+		Serializable(const Serializable&) = default;
+		Serializable & operator=(const Serializable &rhs) = default;
 		virtual ~Serializable() = default;
 
 		virtual YAML::Node emit() const = 0;

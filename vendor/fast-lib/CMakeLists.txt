@@ -5,13 +5,23 @@
 # This file is licensed under the GNU Lesser General Public License Version 3
 # Version 3, 29 June 2007. For details see 'LICENSE.md' in the root directory.
 #
-
-# Default build type: Debug
-set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
 cmake_minimum_required(VERSION 2.8)
+
+########
+# If the user specifies -DCMAKE_BUILD_TYPE on the command line, take their definition
+# and dump it in the cache along with proper documentation, otherwise set CMAKE_BUILD_TYPE
+# to Debug prior to calling PROJECT()
+IF(DEFINED CMAKE_BUILD_TYPE)
+   SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
+ELSE()
+   SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
+ENDIF()
+string( TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE )
+########
+
 project(fast-lib)
 if(POLICY CMP0026)
-	cmake_policy(SET CMP0026 OLD) # Used to get location of boost libs
+	cmake_policy(SET CMP0026 OLD) # Used to by MergeStaticLibraries
 endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -33,7 +43,7 @@ set(FASTLIB "fastlib")
 
 # Define version number
 set(FASTLIB_VERSION_MAJOR "0")
-set(FASTLIB_VERSION_MINOR "1")
+set(FASTLIB_VERSION_MINOR "4")
 set(FASTLIB_VERSION_PATCH "0")
 set(FASTLIB_VERSION "${FASTLIB_VERSION_MAJOR}.${FASTLIB_VERSION_MINOR}.${FASTLIB_VERSION_PATCH}")
 
@@ -51,6 +61,51 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 # Set compiler flags
+########
+# Compiler/linker options based on the different compilers
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  # Using Clang
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
+    ADD_DEFINITIONS(-g -Ofast -march=native)
+  endif()
+
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
+    ADD_DEFINITIONS(-g3 -O0 -Weverything)
+
+    ADD_DEFINITIONS(-Wno-c++98-compat -Wno-shadow -Wno-c++98-compat-pedantic -Wno-padded)
+    ADD_DEFINITIONS(-Wno-exit-time-destructors -Wno-global-constructors)
+  endif()
+
+  # Options required to reduce the noise of spdlog
+  ADD_DEFINITIONS(-Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-sign-conversion -Wno-padded -Wno-switch-enum)
+  ADD_DEFINITIONS(-Wno-old-style-cast -Wno-undef -Wno-documentation-unknown-command)
+  ADD_DEFINITIONS(-Wno-weak-vtables -Wno-global-constructors -Wno-exit-time-destructors -Wno-newline-eof)
+  ADD_DEFINITIONS(-Wno-missing-variable-declarations -Wno-double-promotion -Wno-extra-semi)
+
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # Using GCC
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
+    ADD_DEFINITIONS(-g -O2 -march=native)
+  endif()
+
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
+    ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra -Wunused)
+  endif()
+
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+  # Using Intel C++
+
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "release")
+    ADD_DEFINITIONS(-g -fast)
+  endif()
+
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
+    ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra)
+  endif()
+
+endif()
+########
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" CXX11_SUPPORTED)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" CXX0X_SUPPORTED)
@@ -61,8 +116,6 @@ elseif(CXX0X_SUPPORTED)
 else()
 	message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support.")
 endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 ### Define header, source and lib files
 # Headers
@@ -81,7 +134,9 @@ set(HEADERS
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/reply.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/stop.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/restart.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/system_info.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/pci_id.hpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/ivshmem.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/time_measurement.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/result.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/task.hpp"
@@ -100,7 +155,9 @@ set(SRC
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/reply.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/stop.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/restart.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/system_info.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/pci_id.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/ivshmem.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/time_measurement.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/result.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/task.cpp"

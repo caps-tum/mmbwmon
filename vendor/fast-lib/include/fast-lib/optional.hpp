@@ -38,13 +38,15 @@ public:
 	bool operator==(const Optional<T> &rhs) const;
 	bool operator==(const T &rhs) const;
 
-	operator T&();
-	operator const T&() const;
-
 	bool is_valid() const noexcept;
+	operator bool() const noexcept;
 
 	T & get();
 	const T & get() const;
+	T & operator*();
+	const T & operator*() const;
+	T * operator->();
+	T * operator->() const;
 
 	std::string get_tag() const;
 
@@ -141,19 +143,13 @@ bool Optional<T>::operator==(const T &rhs) const
 }
 
 template<typename T>
-Optional<T>::operator T & ()
-{
-	return get();
-}
-
-template<typename T>
-Optional<T>::operator const T & () const
-{
-	return get();
-}
-
-template<typename T>
 bool Optional<T>::is_valid() const noexcept
+{
+	return valid;
+}
+
+template<typename T>
+Optional<T>::operator bool() const noexcept
 {
 	return valid;
 }
@@ -172,6 +168,30 @@ const T & Optional<T>::get() const
 	if (!valid)
 		throw std::runtime_error("Optional value not valid.");
 	return *ptr;
+}
+
+template<typename T>
+T & Optional<T>::operator*()
+{
+	return get();
+}
+
+template<typename T>
+const T & Optional<T>::operator*() const
+{
+	return get();
+}
+
+template<typename T>
+T * Optional<T>::operator->() const
+{
+	return &get();
+}
+
+template<typename T>
+T * Optional<T>::operator->()
+{
+	return &get();
 }
 
 template<typename T>

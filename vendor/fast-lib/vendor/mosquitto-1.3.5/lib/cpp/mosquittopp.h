@@ -34,8 +34,8 @@ This product includes cryptographic software written by Eric Young
 This product includes software written by Tim Hudson (tjh@cryptsoft.com)
 */
 
-#ifndef _MOSQUITTOPP_H_
-#define _MOSQUITTOPP_H_
+#ifndef MOSQUITTOPP_H_
+#define MOSQUITTOPP_H_
 
 #ifdef _WIN32
 #	ifdef mosquittopp_EXPORTS
@@ -48,8 +48,8 @@ This product includes software written by Tim Hudson (tjh@cryptsoft.com)
 #endif
 
 #include <cstdlib>
-#include <time.h>
 #include <mosquitto.h>
+#include <time.h>
 
 namespace mosqpp {
 
@@ -73,7 +73,7 @@ class mosqpp_EXPORT mosquittopp {
 		mutable struct mosquitto *m_mosq;
 	public:
 		mosquittopp(const char *id=NULL, bool clean_session=true);
-		~mosquittopp();
+		virtual ~mosquittopp();
 
 		int reinitialise(const char *id, bool clean_session);
 		int socket() const;
@@ -107,15 +107,15 @@ class mosqpp_EXPORT mosquittopp {
 		int loop_start() const;
 		int loop_stop(bool force=false) const;
 		bool want_write() const;
-		
-		virtual void on_connect(int rc) {return;};
-		virtual void on_disconnect(int rc) {return;};
-		virtual void on_publish(int mid) {return;};
-		virtual void on_message(const struct mosquitto_message *message) {return;};
-		virtual void on_subscribe(int mid, int qos_count, const int *granted_qos) {return;};
-		virtual void on_unsubscribe(int mid) {return;};
-		virtual void on_log(int level, const char *str) {return;};
-		virtual void on_error() {return;};
+
+		virtual void on_connect(int /*rc*/) {return;}
+		virtual void on_disconnect(int /*rc*/) {return;}
+		virtual void on_publish(int /*mid*/) {return;}
+		virtual void on_message(const struct mosquitto_message * /*message*/) {return;}
+		virtual void on_subscribe(int /*mid*/, int /*qos_count*/, const int * /*granted_qos*/) {return;}
+		virtual void on_unsubscribe(int /*mid*/) {return;}
+		virtual void on_log(int /*level*/, const char * /*str*/) {return;}
+		virtual void on_error() {return;}
 };
 
 }

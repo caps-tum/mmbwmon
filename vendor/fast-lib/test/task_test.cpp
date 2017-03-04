@@ -18,8 +18,8 @@ struct Task_tester :
 		auto buf = task1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		task2.from_string(buf);
-		fructose_assert(task2.concurrent_execution.is_valid());
-		fructose_assert(task2.time_measurement.is_valid());
+		fructose_assert(task2.concurrent_execution);
+		fructose_assert(task2.time_measurement);
 		fructose_assert(task2.concurrent_execution == task1.concurrent_execution);
 		fructose_assert(task2.time_measurement == task1.time_measurement);
 	}
@@ -32,8 +32,8 @@ struct Task_tester :
 		auto buf = task1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		task2.from_string(buf);
-		fructose_assert(!task2.concurrent_execution.is_valid());
-		fructose_assert(!task2.time_measurement.is_valid());
+		fructose_assert(!task2.concurrent_execution);
+		fructose_assert(!task2.time_measurement);
 	}
 	void start1(const std::string &test_name)
 	{
@@ -43,19 +43,25 @@ struct Task_tester :
 		start1.vcpus = 8;
 		start1.memory = 8 * 1024 * 1024;
 		start1.pci_ids.emplace_back(0x15b3, 0x1004); // lookup emplace_back params
+		start1.ivshmem = fast::msg::migfra::Device_ivshmem();
+		start1.ivshmem->id = "test";
+		start1.ivshmem->size = "512M";
 
 		Start start2;
 		auto buf = start1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		start2.from_string(buf);
-		fructose_assert(start2.vm_name.is_valid());
-		fructose_assert(start2.vcpus.is_valid());
-		fructose_assert(start2.memory.is_valid());
+		fructose_assert(start2.vm_name);
+		fructose_assert(start2.vcpus);
+		fructose_assert(start2.memory);
+		fructose_assert(start2.ivshmem);
 		fructose_assert_eq(start2.pci_ids.size(), 1);
-		fructose_assert(!start2.xml.is_valid());
+		fructose_assert(!start2.xml);
 		fructose_assert(start2.vm_name == start1.vm_name);
 		fructose_assert(start2.vcpus == start1.vcpus);
 		fructose_assert(start2.memory == start1.memory);
+		fructose_assert(start2.ivshmem->id == start1.ivshmem->id);
+		fructose_assert(start2.ivshmem->size == start1.ivshmem->size);
 		fructose_assert_eq(start2.pci_ids[0], start1.pci_ids[0]);
 	}
 
@@ -69,11 +75,11 @@ struct Task_tester :
 		auto buf = start1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		start2.from_string(buf);
-		fructose_assert(!start2.vm_name.is_valid());
-		fructose_assert(!start2.vcpus.is_valid());
-		fructose_assert(!start2.memory.is_valid());
+		fructose_assert(!start2.vm_name);
+		fructose_assert(!start2.vcpus);
+		fructose_assert(!start2.memory);
 		fructose_assert_eq(start2.pci_ids.size(), 0);
-		fructose_assert(start2.xml.is_valid());
+		fructose_assert(start2.xml);
 		fructose_assert(start2.xml == start1.xml);
 	}
 
@@ -89,8 +95,8 @@ struct Task_tester :
 		auto buf = stop1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		stop2.from_string(buf);
-		fructose_assert(stop2.force.is_valid());
-		fructose_assert(stop2.undefine.is_valid());
+		fructose_assert(stop2.force);
+		fructose_assert(stop2.undefine);
 		fructose_assert_eq(stop2.vm_name, stop1.vm_name);
 		fructose_assert(stop2.force == stop1.force);
 		fructose_assert(stop2.undefine == stop1.undefine);
@@ -100,14 +106,17 @@ struct Task_tester :
 	{
 		(void) test_name;
 		Stop stop1;
-		stop1.vm_name = "vm1";
+		stop1.regex = "vm\\d";
 
 		Stop stop2;
 		auto buf = stop1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		stop2.from_string(buf);
-		fructose_assert(!stop2.force.is_valid());
-		fructose_assert_eq(stop2.vm_name, stop1.vm_name);
+		fructose_assert(!stop2.force);
+		fructose_assert(!stop2.undefine);
+		fructose_assert(!stop2.vm_name);
+		fructose_assert(stop2.regex);
+		fructose_assert_eq(stop2.regex, stop1.regex);
 	}
 
 	void migrate(const std::string &test_name)
@@ -125,10 +134,10 @@ struct Task_tester :
 		auto buf = mig1.to_string();
 		std::cout << "Serialized string: " << buf << std::endl;
 		mig2.from_string(buf);
-		fructose_assert(mig2.migration_type.is_valid());
-		fructose_assert(mig2.rdma_migration.is_valid());
-		fructose_assert(mig2.pscom_hook_procs.is_valid());
-		fructose_assert(mig2.vcpu_map.is_valid());
+		fructose_assert(mig2.migration_type);
+		fructose_assert(mig2.rdma_migration);
+		fructose_assert(mig2.pscom_hook_procs);
+		fructose_assert(mig2.vcpu_map);
 		fructose_assert_eq(mig2.vm_name, mig1.vm_name);
 		fructose_assert_eq(mig2.dest_hostname, mig1.dest_hostname);
 		fructose_assert(mig2.migration_type == mig1.migration_type);

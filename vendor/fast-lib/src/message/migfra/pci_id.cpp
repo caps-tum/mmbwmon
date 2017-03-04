@@ -63,8 +63,8 @@ YAML::Node PCI_id::emit() const
 
 void PCI_id::load(const YAML::Node &node)
 {
-	vendor = std::stoul(node["vendor"].as<std::string>(), nullptr, 0);
-	device = std::stoul(node["device"].as<std::string>(), nullptr, 0);
+	vendor = static_cast<vendor_t>(std::stoul(node["vendor"].as<std::string>(), nullptr, 0));
+	device = static_cast<device_t>(std::stoul(node["device"].as<std::string>(), nullptr, 0));
 }
 
 std::ostream & operator<<(std::ostream &os, const PCI_id &rhs)

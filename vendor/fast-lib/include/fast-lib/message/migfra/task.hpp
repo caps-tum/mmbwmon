@@ -9,6 +9,7 @@
 #ifndef FAST_LIB_MESSAGE_MIGFRA_TASK_HPP
 #define FAST_LIB_MESSAGE_MIGFRA_TASK_HPP
 
+#include <fast-lib/message/migfra/ivshmem.hpp>
 #include <fast-lib/message/migfra/pci_id.hpp>
 #include <fast-lib/message/migfra/time_measurement.hpp>
 #include <fast-lib/optional.hpp>
@@ -36,7 +37,7 @@ struct Task :
 	 * \param time_measurement Measure execution time and send in Result.
 	 */
 	Task(bool concurrent_execution, bool time_measurement = false);
-	virtual ~Task(){};
+	virtual ~Task(){}
 
 	YAML::Node emit() const override;
 	void load(const YAML::Node &node) override;
@@ -58,9 +59,7 @@ struct Task_container :
 	struct no_task_exception :
 		public std::runtime_error
 	{
-		no_task_exception(const std::string &str) :
-			std::runtime_error(str)
-		{}
+		no_task_exception(const std::string &str);
 	};
 
 	/**
@@ -119,8 +118,12 @@ struct Start :
 	Optional<std::string> vm_name;
 	Optional<unsigned int> vcpus;
 	Optional<unsigned long> memory;
+	Optional<std::vector<std::vector<unsigned int>>> memnode_map;
 	std::vector<PCI_id> pci_ids;
 	Optional<std::string> xml;
+	Optional<Device_ivshmem> ivshmem;
+	Optional<bool> transient;
+	Optional<std::vector<std::vector<unsigned int>>> vcpu_map;
 };
 
 /**
@@ -143,10 +146,28 @@ struct Stop :
 	YAML::Node emit() const override;
 	void load(const YAML::Node &node) override;
 
-	std::string vm_name;
+	Optional<std::string> vm_name;
+	Optional<std::string> regex;
 	Optional<bool> force;
 	Optional<bool> undefine;
 };
+
+/**
+ * \brief Used for the swap-with option of the migrate task.
+ */
+struct Swap_with :
+	public fast::Serializable
+{
+	Swap_with();
+
+	YAML::Node emit() const override;
+	void load(const YAML::Node &node) override;
+
+	std::string vm_name;
+	Optional<std::string> pscom_hook_procs;
+	Optional<std::vector<std::vector<unsigned int>>> vcpu_map;
+};
+
 
 /**
  * \brief Task to migrate a virtual machine.
@@ -160,7 +181,7 @@ struct Migrate :
 	 *
 	 * \param vm_name The name of the virtual machine to migrate.
 	 * \param dest_hostname The name of the host to migrate to.
-	 * \param live_migration Option to enable live migration.
+	 * \param migration_type Option to enable live migration.
 	 * \param rdma_migration Option to enable rdma migration.
 	 * \param concurrent_execution Execute this Task in dedicated thread.
 	 * \param pscom_hook_procs Number of processes to suspend during migration.
@@ -172,7 +193,7 @@ struct Migrate :
 	 *
 	 * \param vm_name The name of the virtual machine to migrate.
 	 * \param dest_hostname The name of the host to migrate to.
-	 * \param live_migration Option to enable live migration.
+	 * \param migration_type Option to enable live migration.
 	 * \param rdma_migration Option to enable rdma migration.
 	 * \param concurrent_execution Execute this Task in dedicated thread.
 	 * \param pscom_hook_procs Number of processes to suspend during migration as string or "auto" for auto detection.
@@ -189,7 +210,7 @@ struct Migrate :
 	Optional<bool> rdma_migration;
 	Optional<std::string> pscom_hook_procs;
 	Optional<std::string> transport;
-	Optional<std::string> swap_with;
+	Optional<Swap_with> swap_with;
 	Optional<std::vector<std::vector<unsigned int>>> vcpu_map;
 };
 
@@ -270,6 +291,7 @@ YAML_CONVERT_IMPL(fast::msg::migfra::Task)
 YAML_CONVERT_IMPL(fast::msg::migfra::Task_container)
 YAML_CONVERT_IMPL(fast::msg::migfra::Start)
 YAML_CONVERT_IMPL(fast::msg::migfra::Stop)
+YAML_CONVERT_IMPL(fast::msg::migfra::Swap_with)
 YAML_CONVERT_IMPL(fast::msg::migfra::Migrate)
 YAML_CONVERT_IMPL(fast::msg::migfra::Repin)
 YAML_CONVERT_IMPL(fast::msg::migfra::Suspend)

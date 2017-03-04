@@ -43,8 +43,9 @@ typedef struct thread_args {
 // Prototypes
 static void set_affinity(distgend_initT init);
 static double bench(distgend_configT config);
+static void internal_init(distgend_initT init);
 
-void distgend_init(distgend_initT init) {
+static void internal_init(distgend_initT init) {
 	assert(init.number_of_threads < DISTGEN_MAXTHREADS);
 	assert(init.NUMA_domains < init.number_of_threads);
 	assert((init.number_of_threads % init.NUMA_domains) == 0);
@@ -70,6 +71,10 @@ void distgend_init(distgend_initT init) {
 	set_affinity(init);
 
 	initBufs();
+}
+
+void distgend_init(distgend_initT init) {
+	internal_init(init);
 
 	// fill distgen_mem_bw_results
 	distgend_configT config;
@@ -78,6 +83,14 @@ void distgend_init(distgend_initT init) {
 		config.threads_to_use[i] = i;
 
 		distgen_mem_bw_results[i] = bench(config);
+	}
+}
+
+void distgend_init_without_bench(distgend_initT init, const double *const membw) {
+	internal_init(init);
+	for (unsigned char i = 0; i < init.number_of_threads / init.SMT_factor; ++i) {
+		// TODO no range check.
+		distgen_mem_bw_results[i] = membw[i];
 	}
 }
 

@@ -22,10 +22,22 @@ FASTLIB_LOG_SET_LEVEL_GLOBAL(comm_log, trace);
 namespace fast {
 
 /// Helper function to make error codes human readable.
-std::string mosq_err_string(const std::string &str, int code)
+static std::string mosq_err_string(const std::string &str, int code)
 {
 	return str + mosqpp::strerror(code);
 }
+
+/// Helper function to convert a given topic into a regular expression
+static std::regex topic_to_regex(const std::string &topic)
+{
+	// Replace "+" by "[^/]*"
+	auto regex_topic = std::regex_replace(topic, std::regex(R"((\+))"), R"([^/]*)");
+	// Replace "#" by "[^/]*(?:/[^/]*)*$"
+	regex_topic = std::regex_replace(regex_topic, std::regex(R"((#))"), R"([^/]*(?:/[^/]*)*$)");
+	return std::regex(regex_topic);
+}
+
+
 
 class MQTT_subscription
 {
@@ -249,15 +261,6 @@ void MQTT_communicator::on_disconnect(int rc)
 }
 
 
-std::regex topic_to_regex(const std::string &topic)
-{
-	// Replace "+" by "[^/]*"
-	auto regex_topic = std::regex_replace(topic, std::regex(R"((\+))"), R"([^/]*)");
-	// Replace "#" by "[^/]*(?:/[^/]*)*$"
-	regex_topic = std::regex_replace(regex_topic, std::regex(R"((#))"), R"([^/]*(?:/[^/]*)*$)");
-	return std::regex(regex_topic);
-}
-
 void MQTT_communicator::on_message(const mosquitto_message *msg)
 {
 	FASTLIB_LOG(comm_log, trace) << "Callback: on_message with topic: " << msg->topic;
@@ -294,7 +297,7 @@ void MQTT_communicator::send_message(const std::string &message, const std::stri
 	// Use default topic if empty string is passed.
 	auto &real_topic = topic == "" ? default_publish_topic : topic;
 	// Publish message to topic.
-	int ret = publish(nullptr, real_topic.c_str(), message.size(), message.c_str(), qos, false);
+	int ret = publish(nullptr, real_topic.c_str(), static_cast<int>(message.size()), message.c_str(), qos, false);
 	if (ret != MOSQ_ERR_SUCCESS)
 		throw std::runtime_error(mosq_err_string("Error sending message: ", ret));
 	FASTLIB_LOG(comm_log, trace) << "Message sent to topic " << real_topic << ".";
@@ -325,10 +328,9 @@ std::string MQTT_communicator::get_message(const std::string &topic, const std::
 		auto &subscription = subscriptions.at(topic);
 		lock.unlock();
 		return subscription->get_message(duration, actual_topic);
-	} catch (const std::out_of_range &e) {
+	} catch (const std::out_of_range &/*e*/) {
 		throw std::out_of_range("Topic not found in subscriptions.");
 	}
-	FASTLIB_LOG(comm_log, trace) << "Message got.";
 }
 
 

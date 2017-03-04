@@ -17,6 +17,10 @@ namespace fast {
 namespace msg {
 namespace migfra {
 
+//
+// Task implementation
+//
+
 Task::Task() :
 	concurrent_execution("concurrent-execution"),
 	time_measurement("time-measurement"),
@@ -46,6 +50,10 @@ void Task::load(const YAML::Node &node)
 	time_measurement.load(node);
 	driver.load(node);
 }
+
+//
+// Task_container implementation
+//
 
 Task_container::Task_container() :
 	concurrent_execution("concurrent-execution"),
@@ -98,57 +106,65 @@ YAML::Node Task_container::emit() const
 		merge_node(node, tasks.front()->emit());
 	} else if (type_str == "repin vm") {
 		merge_node(node, tasks.front()->emit());
-	} else {
+	} else if (type_str == "start vm") {
 		node["vm-configurations"] = tasks;
+	} else {
+		node["list"] = tasks;
 	}
 	merge_node(node, concurrent_execution.emit());
 	merge_node(node, id.emit());
 	return node;
 }
 
-std::vector<std::shared_ptr<Task>> load_start_task(const YAML::Node &node)
+// Implemented here to allow the compiler to place the vtable in
+// this compilation unit. Would be emitted in every compilation
+// unit otherwise.
+Task_container::no_task_exception::no_task_exception(const std::string &str)
+	: std::runtime_error(str) {}
+
+static std::vector<std::shared_ptr<Task>> load_start_task(const YAML::Node &node)
 {
 	std::vector<std::shared_ptr<Start>> tasks;
 	fast::load(tasks, node["vm-configurations"]);
 	return std::vector<std::shared_ptr<Task>>(tasks.begin(), tasks.end());
 }
 
-std::vector<std::shared_ptr<Task>> load_stop_task(const YAML::Node &node)
+static std::vector<std::shared_ptr<Task>> load_stop_task(const YAML::Node &node)
 {
 	std::vector<std::shared_ptr<Stop>> tasks;
 	fast::load(tasks, node["list"]);
 	return std::vector<std::shared_ptr<Task>>(tasks.begin(), tasks.end());
 }
 
-std::vector<std::shared_ptr<Task>> load_migrate_task(const YAML::Node &node)
+static std::vector<std::shared_ptr<Task>> load_migrate_task(const YAML::Node &node)
 {
 	std::shared_ptr<Migrate> migrate_task;
 	fast::load(migrate_task, node);
 	return std::vector<std::shared_ptr<Task>>(1, migrate_task);
 }
 
-std::vector<std::shared_ptr<Task>> load_repin_task(const YAML::Node &node)
+static std::vector<std::shared_ptr<Task>> load_repin_task(const YAML::Node &node)
 {
 	std::shared_ptr<Repin> repin_task;
 	fast::load(repin_task, node);
 	return std::vector<std::shared_ptr<Task>>(1, repin_task);
 }
 
-std::vector<std::shared_ptr<Task>> load_suspend_task(const YAML::Node &node)
+static std::vector<std::shared_ptr<Task>> load_suspend_task(const YAML::Node &node)
 {
 	std::vector<std::shared_ptr<Suspend>> tasks;
 	fast::load(tasks, node["list"]);
 	return std::vector<std::shared_ptr<Task>>(tasks.begin(), tasks.end());
 }
 
-std::vector<std::shared_ptr<Task>> load_resume_task(const YAML::Node &node)
+static std::vector<std::shared_ptr<Task>> load_resume_task(const YAML::Node &node)
 {
 	std::vector<std::shared_ptr<Resume>> tasks;
 	fast::load(tasks, node["list"]);
 	return std::vector<std::shared_ptr<Task>>(tasks.begin(), tasks.end());
 }
 
-std::vector<std::shared_ptr<Task>> load_quit_task(const YAML::Node &node)
+static std::vector<std::shared_ptr<Task>> load_quit_task(const YAML::Node &node)
 {
 	std::shared_ptr<Quit> quit_task;
 	fast::load(quit_task, node);
@@ -160,9 +176,9 @@ void Task_container::load(const YAML::Node &node)
 	std::string type;
 	try {
 		fast::load(type, node["task"]);
-	} catch (const std::exception &e) {
+	} catch (const std::exception &/*e*/) {
 		throw Task_container::no_task_exception("Cannot find key \"task\" to load Task from YAML.");
-	} 
+	}
 	if (type == "start vm") {
 		tasks = load_start_task(node);
 	} else if (type == "stop vm") {
@@ -184,11 +200,19 @@ void Task_container::load(const YAML::Node &node)
 	id.load(node);
 }
 
+//
+// Start implementation
+//
+
 Start::Start() :
 	vm_name("vm-name"),
 	vcpus("vcpus"),
 	memory("memory"),
-	xml("xml")
+	memnode_map("memnode-map"),
+	xml("xml"),
+	ivshmem("ivshmem"),
+	transient("transient"),
+	vcpu_map("vcpu-map")
 {
 }
 
@@ -197,8 +221,12 @@ Start::Start(std::string vm_name, unsigned int vcpus, unsigned long memory, std:
 	vm_name("vm-name", std::move(vm_name)),
 	vcpus("vcpus", vcpus),
 	memory("memory", memory),
+	memnode_map("memnode-map"),
 	pci_ids(std::move(pci_ids)),
-	xml("xml")
+	xml("xml"),
+	ivshmem("ivshmem"),
+	transient("transient"),
+	vcpu_map("vcpu-map")
 {
 }
 
@@ -207,8 +235,12 @@ Start::Start(std::string xml, std::vector<PCI_id> pci_ids, bool concurrent_execu
 	vm_name("vm-name"),
 	vcpus("vcpus"),
 	memory("memory"),
+	memnode_map("memnode-map"),
 	pci_ids(std::move(pci_ids)),
-	xml("xml", xml)
+	xml("xml", xml),
+	ivshmem("ivshmem"),
+	transient("transient"),
+	vcpu_map("vcpu-map")
 {
 }
 
@@ -218,9 +250,17 @@ YAML::Node Start::emit() const
 	merge_node(node, vm_name.emit());
 	merge_node(node, vcpus.emit());
 	merge_node(node, memory.emit());
+	merge_node(node, memnode_map.emit());
+	if (memnode_map.is_valid())
+		node[memnode_map.get_tag()].SetStyle(YAML::EmitterStyle::Flow);
 	merge_node(node, xml.emit());
+	merge_node(node, ivshmem.emit());
+	merge_node(node, transient.emit());
 	if (!pci_ids.empty())
 		node["pci-ids"] = pci_ids;
+	merge_node(node, vcpu_map.emit());
+	if (vcpu_map.is_valid())
+		node[vcpu_map.get_tag()].SetStyle(YAML::EmitterStyle::Flow);
 	return node;
 }
 
@@ -230,11 +270,21 @@ void Start::load(const YAML::Node &node)
 	vm_name.load(node);
 	vcpus.load(node);
 	memory.load(node);
+	memnode_map.load(node);
 	fast::load(pci_ids, node["pci-ids"], std::vector<PCI_id>());
 	xml.load(node);
+	ivshmem.load(node);
+	transient.load(node);
+	vcpu_map.load(node);
 }
 
+//
+// Stop implementation
+//
+
 Stop::Stop() :
+	vm_name("vm-name"),
+	regex("regex"),
 	force("force"),
 	undefine("undefine")
 {
@@ -242,7 +292,8 @@ Stop::Stop() :
 
 Stop::Stop(std::string vm_name, bool force, bool undefine, bool concurrent_execution) :
 	Task::Task(concurrent_execution),
-	vm_name(std::move(vm_name)),
+	vm_name("vm-name", std::move(vm_name)),
+	regex("regex"),
 	force("force", force),
 	undefine("undefine", undefine)
 {
@@ -251,7 +302,8 @@ Stop::Stop(std::string vm_name, bool force, bool undefine, bool concurrent_execu
 YAML::Node Stop::emit() const
 {
 	YAML::Node node = Task::emit();
-	node["vm-name"] = vm_name;
+	merge_node(node, vm_name.emit());
+	merge_node(node, regex.emit());
 	merge_node(node, force.emit());
 	merge_node(node, undefine.emit());
 	return node;
@@ -260,10 +312,43 @@ YAML::Node Stop::emit() const
 void Stop::load(const YAML::Node &node)
 {
 	Task::load(node);
-	fast::load(vm_name, node["vm-name"]);
+	vm_name.load(node);
+	regex.load(node);
 	force.load(node);
 	undefine.load(node);
 }
+
+//
+// Swap_with implementation
+//
+
+Swap_with::Swap_with() :
+	pscom_hook_procs("pscom-hook-procs"),
+	vcpu_map("vcpu-map")
+{
+}
+
+YAML::Node Swap_with::emit() const
+{
+	YAML::Node node;
+	node["vm-name"] = vm_name;
+	merge_node(node, pscom_hook_procs.emit());
+	merge_node(node, vcpu_map.emit());
+	if (vcpu_map.is_valid())
+		node[vcpu_map.get_tag()].SetStyle(YAML::EmitterStyle::Flow);
+	return node;
+}
+
+void Swap_with::load(const YAML::Node &node)
+{
+	fast::load(vm_name, node["vm-name"]);
+	pscom_hook_procs.load(node);
+	vcpu_map.load(node);
+}
+
+//
+// Migrate implementation
+//
 
 Migrate::Migrate() :
 	migration_type("migration-type"),
@@ -333,6 +418,10 @@ void Migrate::load(const YAML::Node &node)
 	}
 }
 
+//
+// Repin implementation
+//
+
 Repin::Repin()
 {
 }
@@ -360,6 +449,10 @@ void Repin::load(const YAML::Node &node)
 	fast::load(vcpu_map, node["vcpu-map"]);
 }
 
+//
+// Suspend implementation
+//
+
 Suspend::Suspend()
 {
 }
@@ -382,6 +475,10 @@ void Suspend::load(const YAML::Node &node)
 	Task::load(node);
 	fast::load(vm_name, node["vm-name"]);
 }
+
+//
+// Resume implementation
+//
 
 Resume::Resume()
 {
