@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <cstdlib>
 #include <cstring>
@@ -15,6 +16,7 @@
 #include <fast-lib/message/agent/mmbwmon/request.hpp>
 #include <fast-lib/message/agent/mmbwmon/restart.hpp>
 #include <fast-lib/message/agent/mmbwmon/stop.hpp>
+#include <fast-lib/message/agent/mmbwmon/system_info.hpp>
 #include <fast-lib/mqtt_communicator.hpp>
 
 #ifdef CGROUP_SUPPORT
@@ -102,20 +104,22 @@ static void parse_options(size_t argc, const char **argv) {
 	if (server == "" && !measure_only) print_help(argv[0]);
 }
 
+// TODO refactor. Currently also takes care of writing files!
 static void print_distgen_results(distgend_initT distgen_init) {
 	assert(distgen_init.number_of_threads / distgen_init.SMT_factor - 1 < DISTGEN_MAXTHREADS);
 
 	std::ofstream gnuplot_file;
 	if (home_dir_available) {
-		gnuplot_file.open(std::string(home_dir) + "/" + get_hostname() + ".dat", std::ios::trunc);
+		std::string filename(home_dir + "/" + get_hostname() + ".dat");
+		gnuplot_file.open(filename, std::ios::trunc);
 		if (!gnuplot_file.is_open()) {
-			std::cerr << "Could not create file (" << std::string(home_dir) + "/" + get_hostname() + ".dat"
-					  << ") to store benchmark data." << std::endl;
+			std::cerr << "Could not create file (" << filename << ") to store benchmark data." << std::endl;
 		}
 	}
 
 	distgend_configT config;
 	std::string gnuplot_data;
+	std::vector<double> membw;
 
 	std::cout << "threads\t\tmeasured (GByte/s)\tcalculated (GByte/s)" << std::endl;
 	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
@@ -127,6 +131,8 @@ static void print_distgen_results(distgend_initT distgen_init) {
 		gnuplot_data += std::to_string(i + 1) + " ";
 		gnuplot_data += std::to_string(distgend_get_measured_idle_bandwidth(i + 1)) + " ";
 		gnuplot_data += std::to_string(distgend_get_max_bandwidth(config)) + "\n";
+
+		membw.push_back(distgend_get_measured_idle_bandwidth(i + 1));
 	}
 
 	std::string gnuplot_command =
@@ -146,6 +152,20 @@ static void print_distgen_results(distgend_initT distgen_init) {
 		gnuplot_file << "#cores measured calculated" << std::endl;
 		gnuplot_file << gnuplot_data;
 		gnuplot_file.close();
+	}
+
+	fast::msg::agent::mmbwmon::system_info info(distgen_init.number_of_threads, distgen_init.SMT_factor,
+												distgen_init.NUMA_domains, membw);
+	std::ofstream info_file;
+	if (home_dir_available) {
+		std::string filename(home_dir + "/" + get_hostname() + ".info");
+		info_file.open(filename, std::ios::trunc);
+		if (!info_file.is_open()) {
+			std::cerr << "Could not create file (" << filename << ") to store benchmark data." << std::endl;
+		} else {
+			info_file << info.to_string();
+			info_file.close();
+		}
 	}
 }
 
@@ -209,6 +229,36 @@ static void print_distgen_results(distgend_initT distgen_init) {
 }
 #endif
 
+static void init_mmbwmon() {
+	std::ifstream info_file;
+	std::string info_filename(home_dir + "/" + get_hostname() + ".info");
+	info_file.open(info_filename, std::ifstream::in);
+
+	if (!measure_only && home_dir_available && info_file.is_open()) {
+		std::istreambuf_iterator<char> iter(info_file);
+		std::string str(iter, std::istreambuf_iterator<char>());
+
+		fast::msg::agent::mmbwmon::system_info info;
+		info.from_string(str);
+
+		if (info.threads == distgen_init.number_of_threads && info.smt == distgen_init.SMT_factor &&
+			info.numa == distgen_init.NUMA_domains) {
+			std::cout << "Read previous config from file " << info_filename << std::endl;
+			distgend_init_without_bench(distgen_init, &info.membw[0]);
+			return;
+		}
+
+		std::cout << "Previously results were measured with different settings. Starting measurement again."
+				  << std::endl;
+	}
+
+	std::cout << "Starting distgen initialization ...";
+	std::cout.flush();
+	distgend_init(distgen_init);
+
+	std::cout << " done!\n\n";
+}
+
 int main(int argc, char const *argv[]) {
 	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
 
@@ -222,12 +272,7 @@ int main(int argc, char const *argv[]) {
 
 	parse_options(static_cast<size_t>(argc), argv);
 
-	std::cout << "Starting distgen initialization ...";
-	std::cout.flush();
-	distgend_init(distgen_init);
-
-	std::cout << " done!\n\n";
-
+	init_mmbwmon();
 	print_distgen_results(distgen_init);
 
 	if (measure_only) return 0;
