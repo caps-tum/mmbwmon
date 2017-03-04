@@ -1,9 +1,12 @@
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
 
 #include <cstdlib>
 #include <cstring>
+
+#include <pwd.h> // for getpwuid()
 
 #include <distgen/distgen.h>
 
@@ -20,9 +23,12 @@
 
 #include "helper.hpp"
 
+const std::string home_dir = std::string(getpwuid(getuid())->pw_dir) + "/.mmbwmon";
+
 /*** config vars **/
 static distgend_initT distgen_init;
 static bool measure_only = false;
+static bool home_dir_available = false;
 
 [[noreturn]] static void print_help(const char *argv) {
 	std::cout << argv << " supports the following flags:\n";
@@ -99,8 +105,17 @@ static void parse_options(size_t argc, const char **argv) {
 static void print_distgen_results(distgend_initT distgen_init) {
 	assert(distgen_init.number_of_threads / distgen_init.SMT_factor - 1 < DISTGEN_MAXTHREADS);
 
-	std::string gnuplot_command = "echo \"";
+	std::ofstream gnuplot_file;
+	if (home_dir_available) {
+		gnuplot_file.open(std::string(home_dir) + "/" + get_hostname() + ".dat", std::ios::trunc);
+		if (!gnuplot_file.is_open()) {
+			std::cerr << "Could not create file (" << std::string(home_dir) + "/" + get_hostname() + ".dat"
+					  << ") to store benchmark data." << std::endl;
+		}
+	}
+
 	distgend_configT config;
+	std::string gnuplot_data;
 
 	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
 		config.number_of_threads = i + 1;
@@ -109,20 +124,26 @@ static void print_distgen_results(distgend_initT distgen_init) {
 		std::cout << "\tMaximum: " << distgend_get_max_bandwidth(config) << " GByte/s" << std::endl;
 		std::cout << std::endl;
 
-		gnuplot_command += std::to_string(i + 1) + " ";
-		gnuplot_command += std::to_string(distgend_get_max_bandwidth(config)) + "\n";
+		gnuplot_data += std::to_string(i + 1) + " ";
+		gnuplot_data += std::to_string(distgend_get_max_bandwidth(config)) + "\n";
 	}
 
-	gnuplot_command += "\"| gnuplot -e \"set terminal dumb; set ytics nomirror; set xtics 1,1," +
-					   std::to_string(distgen_init.number_of_threads) + " nomirror; set yrange [0:]; set border 3; set "
-																		"xlabel 'threads'; set ylabel 'BW'; plot '-' "
-																		"with lines notitle;\"";
+	std::string gnuplot_command =
+		"echo \"" + gnuplot_data + "\"| gnuplot -e \"set terminal dumb; set ytics nomirror; set xtics 1,1," +
+		std::to_string(distgen_init.number_of_threads) + " nomirror; set yrange [0:]; set border 3; set "
+														 "xlabel 'threads'; set ylabel 'BW'; plot '-' "
+														 "with lines notitle;\"";
 
 	int err = system(gnuplot_command.c_str());
 	if (err != 0) {
 		std::cout << "Could not generate plot. Feel free to execute " << std::endl;
 		std::cout << gnuplot_command << std::endl;
 		std::cout << "on a system with gnuplot installed.";
+	}
+
+	if (home_dir_available && gnuplot_file.is_open()) {
+		gnuplot_file << gnuplot_data;
+		gnuplot_file.close();
 	}
 }
 
@@ -188,6 +209,14 @@ static void print_distgen_results(distgend_initT distgen_init) {
 
 int main(int argc, char const *argv[]) {
 	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
+
+	const int err = system((std::string("mkdir -p ") + home_dir).c_str());
+	if (err == 0) {
+		home_dir_available = true;
+	} else {
+		home_dir_available = false;
+		std::cerr << "Could not create " << home_dir << ". Not saving any measurements.";
+	}
 
 	parse_options(static_cast<size_t>(argc), argv);
 
