@@ -9,6 +9,11 @@
 
 #include <pwd.h> // for getpwuid()
 
+// for perf support
+#include <linux/perf_event.h>
+#include <sys/ioctl.h>
+#include <syscall.h>
+
 #include <distgen/distgen.h>
 
 #include <fast-lib/message/agent/mmbwmon/ack.hpp>
@@ -281,6 +286,67 @@ static void init_mmbwmon() {
 	std::cout << " done!\n\n";
 }
 
+static int perf_event_open(struct perf_event_attr *hw_event, pid_t pid, size_t cpu, int group_fd, unsigned long flags) {
+	return static_cast<int>(syscall(__NR_perf_event_open, hw_event, pid, static_cast<int>(cpu), group_fd, flags));
+}
+
+static std::vector<int> init_perf() {
+
+	std::vector<int> fds;
+	fds.reserve(distgen_init.number_of_threads);
+
+	perf_event_attr event;
+	memset(&event, 0, sizeof(perf_event_attr));
+
+	event.type = PERF_TYPE_HARDWARE;
+	event.size = sizeof(struct perf_event_attr);
+	event.config = PERF_COUNT_HW_INSTRUCTIONS;
+	event.disabled = 1;
+	event.exclude_kernel = 1;
+	event.exclude_hv = 1;
+
+	// for each CPU:
+	// create a systemwide monitor restricted to a set of CPUs
+	for (size_t i = 0; i < distgen_init.number_of_threads; ++i) {
+		auto fd = perf_event_open(&event, -1, i, -1, 0);
+		if (fd == -1) {
+			std::cerr << "Could not create perf event for core " << i
+					  << ". Please set /proc/sys/kernel/perf_event_paranoid to -1." << std::endl;
+			return std::vector<int>();
+		}
+		fds.push_back(fd);
+	}
+
+	return fds;
+}
+
+static void start_perf_measurement(const std::vector<int> &fds) {
+	for (auto fd : fds) {
+		ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+		ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+	}
+}
+
+static void stop_perf_measurement(const std::vector<int> &fds) {
+	for (auto fd : fds) {
+		ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+	}
+}
+
+static std::vector<long long> read_perf_measurement(const std::vector<int> &fds) {
+	std::vector<long long> counts;
+	for (size_t i = 0; i < fds.size(); ++i) {
+		auto fd = fds[i];
+		long long count;
+		auto temp = read(fd, &count, sizeof(long long));
+		if (temp == -1) {
+			std::cerr << "Could not read from perf event for core " << i << std::endl;
+		}
+		counts.push_back(count);
+	}
+	return counts;
+}
+
 int main(int argc, char const *argv[]) {
 	const std::string agentID = "fast/agent/" + get_hostname() + "/mmbwmon";
 
@@ -294,7 +360,15 @@ int main(int argc, char const *argv[]) {
 
 	parse_options(static_cast<size_t>(argc), argv);
 
+	auto perf_ids = init_perf();
+	start_perf_measurement(perf_ids);
 	init_mmbwmon();
+	stop_perf_measurement(perf_ids);
+	auto perf_results = read_perf_measurement(perf_ids);
+	for (size_t i = 0; i < perf_results.size(); ++i) {
+		std::cout << "Core " << i << " issued " << perf_results[i] << " instructions." << std::endl;
+	}
+
 	print_distgen_results(distgen_init);
 	write_gnuplot_file(distgen_init);
 	write_yaml_file(distgen_init);
