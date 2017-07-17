@@ -104,68 +104,90 @@ static void parse_options(size_t argc, const char **argv) {
 	if (server == "" && !measure_only) print_help(argv[0]);
 }
 
-// TODO refactor. Currently also takes care of writing files!
+static void write_gnuplot_file(distgend_initT distgen_init) {
+	std::ofstream gnuplot_file;
+	if (!home_dir_available) {
+		return;
+	}
+
+	std::string filename(home_dir + "/" + get_hostname() + ".dat");
+	gnuplot_file.open(filename, std::ios::trunc);
+	if (!gnuplot_file.is_open()) {
+		std::cerr << "Could not create file (" << filename << ") to store benchmark data." << std::endl;
+		return;
+	}
+
+	gnuplot_file << "#cores measured calculated" << std::endl;
+
+	distgend_configT config;
+	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
+		gnuplot_file << std::to_string(i + 1) + " ";
+		gnuplot_file << std::to_string(distgend_get_measured_idle_bandwidth(i + 1)) + " ";
+
+		config.number_of_threads = i + 1;
+		config.threads_to_use[i] = i;
+		gnuplot_file << std::to_string(distgend_get_max_bandwidth(config)) + "\n";
+	}
+
+	gnuplot_file.close();
+}
+
+static void write_yaml_file(distgend_initT distgen_init) {
+	if (!home_dir_available) {
+		return;
+	}
+
+	std::vector<double> membw;
+	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
+		membw.push_back(distgend_get_measured_idle_bandwidth(i + 1));
+	}
+
+	fast::msg::agent::mmbwmon::system_info info(distgen_init.number_of_threads, distgen_init.SMT_factor,
+												distgen_init.NUMA_domains, membw);
+	std::ofstream info_file;
+	std::string filename(home_dir + "/" + get_hostname() + ".info");
+	info_file.open(filename, std::ios::trunc);
+	if (!info_file.is_open()) {
+		std::cerr << "Could not create file (" << filename << ") to store benchmark data." << std::endl;
+	} else {
+		info_file << info.to_string();
+		info_file.close();
+	}
+}
+
 static void print_distgen_results(distgend_initT distgen_init) {
 	assert(distgen_init.number_of_threads / distgen_init.SMT_factor - 1 < DISTGEN_MAXTHREADS);
 
-	std::ofstream gnuplot_file;
-	if (home_dir_available) {
-		std::string filename(home_dir + "/" + get_hostname() + ".dat");
-		gnuplot_file.open(filename, std::ios::trunc);
-		if (!gnuplot_file.is_open()) {
-			std::cerr << "Could not create file (" << filename << ") to store benchmark data." << std::endl;
-		}
-	}
-
 	distgend_configT config;
 	std::string gnuplot_data;
-	std::vector<double> membw;
 
 	std::cout << "threads\t\tmeasured (GByte/s)\tcalculated (GByte/s)" << std::endl;
 	for (unsigned char i = 0; i < distgen_init.number_of_threads / distgen_init.SMT_factor; ++i) {
 		config.number_of_threads = i + 1;
 		config.threads_to_use[i] = i;
-		std::cout << i + 1 << "\t\t" << distgend_get_measured_idle_bandwidth(i + 1) << "\t\t\t"
-				  << distgend_get_max_bandwidth(config) << std::endl;
+
+		auto dgen_measured = distgend_get_measured_idle_bandwidth(i + 1);
+		auto dgen_computed_max = distgend_get_max_bandwidth(config);
+
+		std::cout << i + 1 << "\t\t" << dgen_measured << "\t\t\t" << dgen_computed_max << std::endl;
 
 		gnuplot_data += std::to_string(i + 1) + " ";
-		gnuplot_data += std::to_string(distgend_get_measured_idle_bandwidth(i + 1)) + " ";
-		gnuplot_data += std::to_string(distgend_get_max_bandwidth(config)) + "\n";
-
-		membw.push_back(distgend_get_measured_idle_bandwidth(i + 1));
+		gnuplot_data += std::to_string(dgen_measured) + " ";
+		gnuplot_data += std::to_string(dgen_computed_max) + "\n";
 	}
 
-	std::string gnuplot_command =
-		"echo \"" + gnuplot_data + "\"| gnuplot -e \"set terminal dumb; set ytics nomirror; set xtics 1,1," +
-		std::to_string(distgen_init.number_of_threads) + " nomirror; set yrange [0:]; set border 3; set "
-														 "xlabel 'threads'; set ylabel 'BW'; plot '-' "
-														 "with lines notitle;\"";
+	const std::string gnuplot_command = "echo \"" + gnuplot_data +
+										"\"| gnuplot -e \"set terminal dumb; set ytics nomirror; set xtics 1,1," +
+										std::to_string(distgen_init.number_of_threads) +
+										" nomirror; set yrange [0:]; set border 3; set "
+										"xlabel 'threads'; set ylabel 'BW'; plot '-' "
+										"with lines notitle;\"";
 
 	int err = system(gnuplot_command.c_str());
 	if (err != 0) {
 		std::cout << "Could not generate plot. Feel free to execute " << std::endl;
 		std::cout << gnuplot_command << std::endl;
 		std::cout << "on a system with gnuplot installed.";
-	}
-
-	if (home_dir_available && gnuplot_file.is_open()) {
-		gnuplot_file << "#cores measured calculated" << std::endl;
-		gnuplot_file << gnuplot_data;
-		gnuplot_file.close();
-	}
-
-	fast::msg::agent::mmbwmon::system_info info(distgen_init.number_of_threads, distgen_init.SMT_factor,
-												distgen_init.NUMA_domains, membw);
-	std::ofstream info_file;
-	if (home_dir_available) {
-		std::string filename(home_dir + "/" + get_hostname() + ".info");
-		info_file.open(filename, std::ios::trunc);
-		if (!info_file.is_open()) {
-			std::cerr << "Could not create file (" << filename << ") to store benchmark data." << std::endl;
-		} else {
-			info_file << info.to_string();
-			info_file.close();
-		}
 	}
 }
 
@@ -274,13 +296,13 @@ int main(int argc, char const *argv[]) {
 
 	init_mmbwmon();
 	print_distgen_results(distgen_init);
+	write_gnuplot_file(distgen_init);
+	write_yaml_file(distgen_init);
 
 	if (measure_only) return 0;
 
 	fast::MQTT_communicator comm(agentID, baseTopic + "/request", baseTopic + "/response", server,
 								 static_cast<int>(port), 60);
-
-	std::cout << "MQTT ready!\n\n";
 
 	std::thread bench(bench_thread, std::ref(comm));
 #ifdef CGROUP_SUPPORT
