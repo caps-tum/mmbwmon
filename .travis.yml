@@ -11,28 +11,6 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-4.9
-      env:
-          - COMPILERCXX=g++-4.9
-          - COMPILERC=gcc-4.9
-          - CGROUP_SUP=TRUE
-    - compiler:     gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-4.9
-      env:
-          - COMPILERCXX=g++-4.9
-          - COMPILERC=gcc-4.9
-          - CGROUP_SUP=FALSE
-    - compiler:     gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
             - g++-5
       env:
           - COMPILERCXX=g++-5
