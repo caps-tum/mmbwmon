@@ -1,11 +1,11 @@
 # Use new trusty images, should yield newer compilers and packages
-sudo: true
-dist: trusty
-language: cpp
+sudo:               true
+dist:               trusty
+language:           cpp
 
 matrix:
   include:
-    - compiler: gcc
+    - compiler:     gcc
       addons:
         apt:
           sources:
@@ -16,7 +16,7 @@ matrix:
           - COMPILERCXX=g++-4.9
           - COMPILERC=gcc-4.9
           - CGROUP_SUP=TRUE
-    - compiler: gcc
+    - compiler:     gcc
       addons:
         apt:
           sources:
@@ -27,7 +27,7 @@ matrix:
           - COMPILERCXX=g++-4.9
           - COMPILERC=gcc-4.9
           - CGROUP_SUP=FALSE
-    - compiler: gcc
+    - compiler:     gcc
       addons:
         apt:
           sources:
@@ -38,7 +38,7 @@ matrix:
           - COMPILERCXX=g++-5
           - COMPILERC=gcc-5
           - CGROUP_SUP=TRUE
-    - compiler: gcc
+    - compiler:     gcc
       addons:
         apt:
           sources:
@@ -49,7 +49,7 @@ matrix:
           - COMPILERCXX=g++-5
           - COMPILERC=gcc-5
           - CGROUP_SUP=FALSE
-    - compiler: gcc
+    - compiler:     gcc
       addons:
         apt:
           sources:
@@ -60,7 +60,7 @@ matrix:
           - COMPILERCXX=g++-6
           - COMPILERC=gcc-6
           - CGROUP_SUP=TRUE
-    - compiler: gcc
+    - compiler:     gcc
       addons:
         apt:
           sources:
@@ -71,7 +71,7 @@ matrix:
           - COMPILERCXX=g++-6
           - COMPILERC=gcc-6
           - CGROUP_SUP=FALSE
-    - compiler: clang
+    - compiler:     clang
       addons:
         apt:
           sources:
@@ -80,9 +80,10 @@ matrix:
             - g++-6
       env:
           - COMPILERC=clang
-          - CLANGV=3.8.1
+          - COMPILERCXX=clang++
+          - CLANGV=3.9.1
           - CGROUP_SUP=TRUE
-    - compiler: clang
+    - compiler:     clang
       addons:
         apt:
           sources:
@@ -91,9 +92,10 @@ matrix:
             - g++-6
       env:
           - COMPILERC=clang
-          - CLANGV=3.8.1
+          - COMPILERCXX=clang++
+          - CLANGV=3.9.1
           - CGROUP_SUP=FALSE
-    - compiler: clang
+    - compiler:     clang
       addons:
         apt:
           sources:
@@ -102,9 +104,11 @@ matrix:
             - g++-6
       env:
           - COMPILERC=clang
-          - CLANGV=3.9.0
+          - COMPILERCXX=clang++
+          - CLANGV=4.0.1
           - CGROUP_SUP=TRUE
-    - compiler: clang
+          - RUNCLANGTIDY=TRUE
+    - compiler:     clang
       addons:
         apt:
           sources:
@@ -113,8 +117,10 @@ matrix:
             - g++-6
       env:
           - COMPILERC=clang
-          - CLANGV=3.9.0
+          - COMPILERCXX=clang++
+          - CLANGV=4.0.1
           - CGROUP_SUP=FALSE
+          - RUNCLANGTIDY=TRUE
 
 before_install:
   - sudo add-apt-repository -y ppa:george-edison55/cmake-3.x
@@ -122,11 +128,13 @@ before_install:
   - sudo apt-get install cmake
   - mkdir $HOME/clang+llvm
   - export PATH=$HOME/clang+llvm/bin:$PATH
-  - if [ -n "$CLANGV" ]; then wget http://llvm.org/releases/$CLANGV/clang+llvm-$CLANGV-x86_64-linux-gnu-ubuntu-14.04.tar.xz -O $HOME/clang+llvm.tar.xz; fi
+  - if [ -n "$CLANGV" ]; then wget http://llvm.org/releases/$CLANGV/clang+llvm-$CLANGV-x86_64-linux-gnu-debian8.tar.xz -O $HOME/clang+llvm.tar.xz; fi
   - if [ -n "$CLANGV" ]; then tar xf $HOME/clang+llvm.tar.xz -C $HOME/clang+llvm --strip-components 1; fi
 
 script:
   - mkdir build
   - cd build
-  - cmake -DCMAKE_CXX_COMPILER=$COMPILERCXX -DCMAKE_C_COMPILER=$COMPILERC -DBUILD_CGROUP_SUPPORT=$CGROUP_SUP -DCMAKE_INSTALL_PREFIX=/tmp/ ..
+  - cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DCMAKE_CXX_COMPILER=$COMPILERCXX -DCMAKE_C_COMPILER=$COMPILERC -DBUILD_CGROUP_SUPPORT=$CGROUP_SUP -DCMAKE_INSTALL_PREFIX=/tmp/ ..
   - make
+  - cd ..
+  - if [ -n "$RUNCLANGTIDY" ]; then git ls-files '*.cpp' | xargs -P 1 -I{} clang-tidy -header-filter=.* -p build {}; fi
