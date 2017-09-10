@@ -38,10 +38,10 @@ struct system_info : public fast::Serializable
 	YAML::Node emit() const override;
 	void load(const YAML::Node &node) override;
 
-    size_t threads;
-    size_t smt;
-    size_t numa;
-    std::vector<double> membw;
+	size_t threads;
+	size_t smt;
+	size_t numa;
+	std::vector<double> membw;
 };
 
 }

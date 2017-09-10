@@ -12,7 +12,6 @@ request::request(const std::vector<size_t> &_cores) : cores(_cores)
 YAML::Node request::emit() const
 {
 	YAML::Node node;
-	node["task"] = "mmbwmon request";
 	node["cores"] = cores;
 	return node;
 }

@@ -43,10 +43,14 @@ public:
 
 	T & get();
 	const T & get() const;
+
+	constexpr const T & get_or(const T &default_value) const;
+
 	T & operator*();
 	const T & operator*() const;
+
 	T * operator->();
-	T * operator->() const;
+	const T * operator->() const;
 
 	std::string get_tag() const;
 
@@ -171,6 +175,12 @@ const T & Optional<T>::get() const
 }
 
 template<typename T>
+constexpr const T & Optional<T>::get_or(const T &default_value) const
+{
+	return valid ? get() : default_value;
+}
+
+template<typename T>
 T & Optional<T>::operator*()
 {
 	return get();
@@ -183,13 +193,13 @@ const T & Optional<T>::operator*() const
 }
 
 template<typename T>
-T * Optional<T>::operator->() const
+T * Optional<T>::operator->()
 {
 	return &get();
 }
 
 template<typename T>
-T * Optional<T>::operator->()
+const T * Optional<T>::operator->() const
 {
 	return &get();
 }

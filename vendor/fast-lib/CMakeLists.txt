@@ -134,7 +134,7 @@ set(HEADERS
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/reply.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/stop.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/restart.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/system_info.hpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/agent/mmbwmon/system_info.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/pci_id.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/ivshmem.hpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/include/fast-lib/message/migfra/time_measurement.hpp"
@@ -155,7 +155,7 @@ set(SRC
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/reply.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/stop.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/restart.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/system_info.cpp"
+ 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/agent/mmbwmon/system_info.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/pci_id.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/ivshmem.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/message/migfra/time_measurement.cpp"
@@ -175,7 +175,7 @@ include_directories(SYSTEM ${EXTERNAL_INCLUDES}/fast-lib/external)
 ########
 # mosquitto
 ExternalProject_Add(mosquitto
-	SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/mosquitto-1.3.5
+	SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/mosquitto-1.4.12
 	CMAKE_COMMAND CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake
 	CMAKE_ARGS -DWITH_SRV=OFF -DWITH_TLS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_C_FLAGS=-fpic -DCMAKE_CXX_FLAGS=-fpic
 )

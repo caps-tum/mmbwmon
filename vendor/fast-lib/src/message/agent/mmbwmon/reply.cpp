@@ -12,9 +12,8 @@ reply::reply(const std::vector<size_t> &_cores, double _result) : cores(_cores),
 YAML::Node reply::emit() const
 {
 	YAML::Node node;
-	node["task"] = "mmbwmon response";
 	node["cores"] = cores;
-    node["result"] = result;
+	node["result"] = result;
 	return node;
 }
 

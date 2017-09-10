@@ -9,7 +9,6 @@ namespace mmbwmon {
 YAML::Node ack::emit() const
 {
 	YAML::Node node;
-	node["task"] = "mmbwmon ack";
 	return node;
 }
 

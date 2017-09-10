@@ -12,8 +12,7 @@ restart::restart(const std::string _cgroup) : cgroup(_cgroup)
 YAML::Node restart::emit() const
 {
 	YAML::Node node;
-	node["task"] = "mmbwmon restart";
-    node["cgroup"] = cgroup;
+	node["cgroup"] = cgroup;
 	return node;
 }
 

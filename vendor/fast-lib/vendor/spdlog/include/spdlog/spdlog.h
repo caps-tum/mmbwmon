@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include "tweakme.h"
 #include "common.h"
 #include "logger.h"

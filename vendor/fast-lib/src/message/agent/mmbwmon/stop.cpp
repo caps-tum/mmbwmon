@@ -12,8 +12,7 @@ stop::stop(const std::string _cgroup) : cgroup(_cgroup)
 YAML::Node stop::emit() const
 {
 	YAML::Node node;
-	node["task"] = "mmbwmon stop";
-    node["cgroup"] = cgroup;
+	node["cgroup"] = cgroup;
 	return node;
 }
 

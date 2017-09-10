@@ -12,20 +12,19 @@ system_info::system_info(const size_t _threads, const size_t _smt, const size_t 
 YAML::Node system_info::emit() const
 {
 	YAML::Node node;
-	node["task"] = "mmbwmon system info";
 	node["threads"] = threads;
-    node["smt"] = smt;
-    node["numa"] = numa;
-    node["bandwidth"] = membw;
+	node["smt"] = smt;
+	node["numa"] = numa;
+	node["bandwidth"] = membw;
 	return node;
 }
 
 void system_info::load(const YAML::Node &node)
 {
 	fast::load(threads, node["threads"]);
-    fast::load(smt, node["smt"]);
-    fast::load(numa, node["numa"]);
-    fast::load(membw, node["bandwidth"]);
+	fast::load(smt, node["smt"]);
+	fast::load(numa, node["numa"]);
+	fast::load(membw, node["bandwidth"]);
 }
 
 }
