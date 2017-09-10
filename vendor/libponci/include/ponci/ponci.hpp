@@ -26,9 +26,9 @@ extern "C" {
 
 #include "ponci.h"
 
-/* Start of the C++ only functions. */
 #ifdef __cplusplus
 } /* end extern "C" */
+/* Start of the C++ only functions. */
 
 inline void cgroup_create(const std::string &name) { cgroup_create(name.c_str()); }
 

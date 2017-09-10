@@ -14,7 +14,7 @@ string( TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE )
 
 ########
 # General project settings
-project(ponci)
+project(poncri)
 ########
 
 ########
@@ -67,18 +67,18 @@ find_package(Threads REQUIRED)
 # Compiling and linking
 include_directories(include)
 
-add_library(ponci src/ponci.cpp)
-set_property(TARGET ponci PROPERTY CXX_STANDARD 11)
-INSTALL(TARGETS ponci DESTINATION "lib")
+add_library(poncri src/ponci.cpp src/ponri.cpp)
+set_property(TARGET poncri PROPERTY CXX_STANDARD 11)
+INSTALL(TARGETS poncri DESTINATION "lib")
 INSTALL(FILES include/ponci/ponci.h include/ponci/ponci.hpp DESTINATION "include/ponci")
+INSTALL(FILES include/ponri/ponri.h include/ponri/ponri.hpp DESTINATION "include/ponri")
 
-
-add_executable(ponci_example src/example.cpp)
-set_property(TARGET ponci_example PROPERTY CXX_STANDARD 11)
-target_link_libraries(ponci_example ponci)
-target_link_libraries(ponci_example Threads::Threads)
+add_executable(poncri_example src/example.cpp)
+set_property(TARGET poncri_example PROPERTY CXX_STANDARD 11)
+target_link_libraries(poncri_example poncri)
+target_link_libraries(poncri_example Threads::Threads)
 
 add_executable(cgkill src/cgkill.cpp)
-set_property(TARGET ponci_example PROPERTY CXX_STANDARD 11)
-target_link_libraries(cgkill ponci)
+set_property(TARGET cgkill PROPERTY CXX_STANDARD 11)
+target_link_libraries(cgkill poncri)
 ########

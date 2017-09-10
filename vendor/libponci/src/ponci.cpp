@@ -11,6 +11,8 @@
 
 #include "ponci/ponci.hpp"
 
+#include "fileIO_helper.hpp"
+
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
@@ -30,9 +32,6 @@
 #include <syscall.h>
 #include <unistd.h>
 
-// size of the buffers used to read from file
-static constexpr std::size_t buf_size = 255;
-
 // placeholder to be substituted by the names of a subsystem
 static const auto &SUBSYSTEM_PLACEHOLDER = *new std::string("%SUBSYSTEM%");
 
@@ -43,19 +42,6 @@ static std::vector<std::string> *subsystems;
 // PROTOTYPES
 /////////////////////////////////////////////////////////////////
 static inline std::string cgroup_path(const char *name);
-
-template <typename T> static inline void write_vector_to_file(const std::string &filename, const std::vector<T> &vec);
-template <typename T> static inline void write_array_to_file(const std::string &filename, T *arr, size_t size);
-template <typename T> static inline void write_value_to_file(const std::string &filename, T val);
-template <> inline void write_value_to_file<const char *>(const std::string &filename, const char *val);
-template <typename T> static inline void append_value_to_file(const std::string &filename, T val);
-
-static inline std::string read_line_from_file(const std::string &filename);
-template <typename T> static inline std::vector<T> read_lines_from_file(const std::string &filename);
-
-template <typename T> static inline T string_to_T(const std::string &s, std::size_t &done);
-// template <> inline unsigned long string_to_T<unsigned long>(const std::string &s, std::size_t &done);
-template <> inline int string_to_T<int>(const std::string &s, std::size_t &done);
 
 static std::vector<int> get_tids_from_pid(int pid);
 
@@ -270,13 +256,14 @@ static inline std::string cgroup_path(const char *name) {
 	return res;
 }
 
+#if 0
 template <typename T> static inline void write_vector_to_file(const std::string &filename, const std::vector<T> &vec) {
 	write_array_to_file(filename, &vec[0], vec.size());
 }
 
 template <typename T> static inline void write_array_to_file(const std::string &filename, T *arr, size_t size) {
 	assert(size > 0);
-	assert(filename.compare("") != 0);
+	assert(filename != "");
 
 	std::string str;
 	for (size_t i = 0; i < size; ++i) {
@@ -288,7 +275,7 @@ template <typename T> static inline void write_array_to_file(const std::string &
 }
 
 template <typename T> static inline void append_value_to_file(const std::string &filename, T val) {
-	assert(filename.compare("") != 0);
+	assert(filename != "");
 
 	FILE *f = fopen(filename.c_str(), "a+");
 	if (f == nullptr) {
@@ -313,7 +300,7 @@ template <typename T> static inline void write_value_to_file(const std::string &
 }
 
 template <> void write_value_to_file<const char *>(const std::string &filename, const char *val) {
-	assert(filename.compare("") != 0);
+	assert(filename != "");
 
 	FILE *file = fopen(filename.c_str(), "w+");
 
@@ -336,7 +323,7 @@ template <> void write_value_to_file<const char *>(const std::string &filename, 
 }
 
 static inline std::string read_line_from_file(const std::string &filename) {
-	assert(filename.compare("") != 0);
+	assert(filename != "");
 
 	FILE *file = fopen(filename.c_str(), "r");
 
@@ -363,7 +350,7 @@ static inline std::string read_line_from_file(const std::string &filename) {
 }
 
 template <typename T> static inline std::vector<T> read_lines_from_file(const std::string &filename) {
-	assert(filename.compare("") != 0);
+	assert(filename != "");
 
 	FILE *file = fopen(filename.c_str(), "r");
 
@@ -394,6 +381,7 @@ template <typename T> static inline std::vector<T> read_lines_from_file(const st
 }
 
 template <> int string_to_T<int>(const std::string &s, std::size_t &done) { return stoi(s, &done); }
+#endif
 
 #if 0
 template <> unsigned long string_to_T<unsigned long>(const std::string &s, std::size_t &done) {
@@ -440,7 +428,7 @@ static void replace_subsystem_in_path(std::string &str, const std::string &to) {
 static bool check_is_systemd() {
 	bool ret = false;
 
-	// read /etc/mtab and check if it contains
+	// read /etc/mtab and check if it contains "cgroup /sys/fs/cgroup/systemd"
 	FILE *file = fopen("/etc/mtab", "r");
 
 	if (file == nullptr) {

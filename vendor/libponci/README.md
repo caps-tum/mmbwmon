@@ -1,4 +1,4 @@
-# libponci -- poor mans cgroup interface
+# libponcri -- poor mans cgroup/resctrl interface
 
 [![Build Status](https://travis-ci.org/lrr-tum/libponci.svg?branch=master)](https://travis-ci.org/lrr-tum/libponci)
 

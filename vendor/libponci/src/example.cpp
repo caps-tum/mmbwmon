@@ -15,6 +15,7 @@
 #include <cstddef>
 
 #include "ponci/ponci.hpp"
+#include "ponri/ponri.hpp"
 
 static void sleeper(const std::string &name) {
 	cgroup_create(name);
@@ -32,7 +33,7 @@ static void sleeper(const std::string &name) {
 }
 
 int main(/*int argc, char const *argv[]*/) {
-	const std::string name("ponci_test");
+	const std::string name("poncri_test");
 
 	cgroup_create(name);
 
@@ -43,7 +44,7 @@ int main(/*int argc, char const *argv[]*/) {
 	cgroup_add_me(name);
 
 	cgroup_set_memory_migrate(name, 1);
-	cgroup_set_cpus_exclusive(name, 1);
+	cgroup_set_cpus_exclusive(name, 0);
 	cgroup_set_mem_hardwall(name, 1);
 	cgroup_set_scheduling_domain(name, -1);
 
@@ -62,6 +63,25 @@ int main(/*int argc, char const *argv[]*/) {
 	// remove me from cgroup name and add me to the root before deleting the cgroup
 	cgroup_add_me("");
 	cgroup_delete(name);
+
+	std::cout << "CBM max: " << std::hex << get_cbm_mask_as_uint() << std::endl;
+	std::cout << "CBM min bits: " << get_min_cbm_bits() << std::endl;
+	std::cout << "Number of closids: " << get_num_closids() << std::endl;
+
+	resgroup_create(name);
+
+	std::vector<size_t> cpus;
+	cpus.push_back(0);
+	cpus.push_back(5);
+	resgroup_set_cpus(name, cpus);
+	resgroup_add_me(name);
+
+	std::vector<size_t> schematas;
+	schematas.push_back(0xf0);
+	schematas.push_back(0xf);
+	resgroup_set_schemata(name, schematas);
+
+	resgroup_delete(name);
 
 	return 0;
 }

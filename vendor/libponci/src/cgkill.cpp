@@ -14,7 +14,7 @@
 
 int main(int argc, char const *argv[]) {
 	for (int i = 1; i < argc; ++i) {
-		std::cout << "Going to kill cgroup \"" << argv[i] << "\" ...";
+		std::cout << R"(Going to kill cgroup ")" << argv[i] << R"(" ...)";
 		std::cout.flush();
 		cgroup_kill(argv[i]);
 		std::cout << "dead." << std::endl;

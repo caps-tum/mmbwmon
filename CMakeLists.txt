@@ -84,20 +84,20 @@ link_directories(${libdistgen_path}/lib)
 OPTION(BUILD_CGROUP_SUPPORT "Build with cgroup start/stop support." ON)
 
 ########
-# libponci
-IF(BUILD_CGROUP_SUPPORT)
-ExternalProject_Add(libponci
+# libponcri
+ExternalProject_Add(libponcri
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libponci
     CONFIGURE_COMMAND  CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> ${CMAKE_CURRENT_SOURCE_DIR}/vendor/libponci
     BUILD_IN_SOURCE 0
     BUILD_COMMAND ${MAKE})
 
-# Store ponci variable in directory
-ExternalProject_Get_Property(libponci install_dir)
-set (libponci_path ${install_dir})
-include_directories(${libponci_path}/include)
-link_directories(${libponci_path}/lib)
+# Store poncri variable in directory
+ExternalProject_Get_Property(libponcri install_dir)
+set (libponcri_path ${install_dir})
+include_directories(${libponcri_path}/include)
+link_directories(${libponcri_path}/lib)
 
+IF(BUILD_CGROUP_SUPPORT)
 ADD_DEFINITIONS(-DCGROUP_SUPPORT)
 ENDIF(BUILD_CGROUP_SUPPORT)
 ########
@@ -127,8 +127,8 @@ set_property(TARGET mmbwmon PROPERTY CXX_STANDARD 14)
 add_dependencies(mmbwmon libdistgen libfast)
 target_link_libraries(mmbwmon distgen fastlib rt ${CMAKE_THREAD_LIBS_INIT})
 IF(BUILD_CGROUP_SUPPORT)
-    add_dependencies(mmbwmon libponci)
-    target_link_libraries(mmbwmon ponci)
+    add_dependencies(mmbwmon libponcri)
+    target_link_libraries(mmbwmon poncri)
 ENDIF(BUILD_CGROUP_SUPPORT)
 
 add_executable(request src/request.cpp src/helper.cpp)
