@@ -81,7 +81,10 @@ void resgroup_set_schemata(const char *name, const size_t *schematas, size_t siz
 		stream << std::hex << schematas[i];
 		content += stream.str();
 
-		if (i + 1 != size) content += ";";
+		if (i + 1 != size)
+			content += ";";
+		else
+			content += "\n";
 	}
 
 	write_value_to_file(filename, content);

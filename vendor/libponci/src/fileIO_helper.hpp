@@ -109,9 +109,7 @@ template <> void write_value_to_file<const char *>(const std::string &filename, 
 	}
 
 	if (fclose(file) != 0) {
-		// removed error handling for fclose for now, as resfs always reports an error
-		// for writes to the schema, even though the write was success
-		// throw std::runtime_error(strerror(errno));
+		throw std::runtime_error(strerror(errno));
 	}
 }
 

@@ -27,7 +27,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   endif()
 
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
-    ADD_DEFINITIONS(-g3 -O0 -Weverything -Wno-c++98-compat -Wno-global-constructors -D_GLIBCXX_DEBUG)
+    ADD_DEFINITIONS(-g3 -O0 -Weverything -Wno-c++98-compat -Wno-global-constructors)
   endif()
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -37,7 +37,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   endif()
 
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
-    ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra -Wunused -D_GLIBCXX_DEBUG)
+    ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra -Wunused)
   endif()
 
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
@@ -51,7 +51,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   endif()
 
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "debug")
-    ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra -D_GLIBCXX_DEBUG)
+    ADD_DEFINITIONS(-g3 -O0 -Wall -Wextra)
   endif()
 
 endif()
@@ -68,17 +68,17 @@ find_package(Threads REQUIRED)
 include_directories(include)
 
 add_library(poncri src/ponci.cpp src/ponri.cpp)
-set_property(TARGET poncri PROPERTY CXX_STANDARD 11)
+set_property(TARGET poncri PROPERTY CXX_STANDARD 14)
 INSTALL(TARGETS poncri DESTINATION "lib")
 INSTALL(FILES include/ponci/ponci.h include/ponci/ponci.hpp DESTINATION "include/ponci")
 INSTALL(FILES include/ponri/ponri.h include/ponri/ponri.hpp DESTINATION "include/ponri")
 
 add_executable(poncri_example src/example.cpp)
-set_property(TARGET poncri_example PROPERTY CXX_STANDARD 11)
+set_property(TARGET poncri_example PROPERTY CXX_STANDARD 14)
 target_link_libraries(poncri_example poncri)
 target_link_libraries(poncri_example Threads::Threads)
 
 add_executable(cgkill src/cgkill.cpp)
-set_property(TARGET cgkill PROPERTY CXX_STANDARD 11)
+set_property(TARGET cgkill PROPERTY CXX_STANDARD 14)
 target_link_libraries(cgkill poncri)
 ########

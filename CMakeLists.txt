@@ -135,4 +135,9 @@ add_executable(request src/request.cpp src/helper.cpp)
 add_dependencies(request libfast)
 target_link_libraries(request fastlib rt ${CMAKE_THREAD_LIBS_INIT})
 set_property(TARGET request PROPERTY CXX_STANDARD 14)
+
+add_executable(opticat src/opticat.cpp)
+add_dependencies(opticat libponcri libdistgen)
+target_link_libraries(opticat poncri distgen rt ${CMAKE_THREAD_LIBS_INIT})
+set_property(TARGET opticat PROPERTY CXX_STANDARD 14)
 ########
