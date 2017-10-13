@@ -26,6 +26,7 @@ const std::chrono::seconds measurement_time(10);
 static distgend_initT distgen_init;
 static std::string command;
 static bool use_cache_clear = false;
+static bool brute_force = false;
 
 static std::vector<std::thread> thread_pool;
 
@@ -61,6 +62,7 @@ static void setup_cat() {
 			  << "\n";
 	std::cout << "\t --smt \t\t Number of logical cores per physical core. \t Default: 2\n";
 	std::cout << "\t --cache-clear \t Use cache clear. \t Default: disabled\n";
+	std::cout << "\t --brute-force \t Brute force all combinations. \t Default: disabled\n";
 	std::cout << "\t -- <command> \t The command to be executed. \t No default\n";
 	exit(0);
 }
@@ -106,6 +108,12 @@ static void parse_options(size_t argc, const char **argv) {
 			continue;
 		}
 		if (arg == "--cache-clear") {
+			use_cache_clear = true;
+			++i;
+			continue;
+		}
+		if (arg == "--brute-force") {
+			brute_force = true;
 			use_cache_clear = true;
 			++i;
 			continue;
@@ -242,6 +250,21 @@ static void clear_cache() {
 	cgroup_thaw(res_name);
 }
 
+static std::bitset<64> general_all_bitmasks() {
+	static unsigned long counter = get_cbm_mask_as_uint();
+
+	for (; counter > 0; --counter) {
+		std::bitset<64> bits(counter);
+		bool valid = bits.count() > 2;
+		if (valid) {
+			--counter;
+			return bits;
+		}
+	}
+
+	return std::bitset<64>(0);
+}
+
 int main(int argc, char const *argv[]) {
 	parse_options(static_cast<size_t>(argc), argv);
 
@@ -269,13 +292,23 @@ int main(int argc, char const *argv[]) {
 
 	execute_command(command);
 	// wait some time before we start measurements
-	std::this_thread::sleep_for(measurement_time * 3);
+	std::this_thread::sleep_for(measurement_time * 9);
 
 	// loop over all possible settings
 	while (true) {
+		if (brute_force) {
+			bits = general_all_bitmasks();
+			if (bits.count() == 0) break;
+		}
+
 		std::vector<size_t> schematas;
 		for (size_t n = 0; n < distgen_init.NUMA_domains; ++n) schematas.push_back(bits.to_ullong());
-		resgroup_set_schemata(res_name, schematas);
+		try {
+			resgroup_set_schemata(res_name, schematas);
+		} catch (...) {
+			// ignore invalid masks
+			continue;
+		}
 
 		if (use_cache_clear) {
 			clear_cache();
@@ -287,13 +320,24 @@ int main(int argc, char const *argv[]) {
 
 		auto res = read_perf_measurement(perf_ids);
 
-		llc_misses.push_back(std::accumulate(res.begin(), res.begin() + distgen_init.number_of_threads, 0.0));
-		instruction_count.push_back(std::accumulate(res.begin() + distgen_init.number_of_threads, res.end(), 0.0));
+		const long offset = static_cast<long>(distgen_init.number_of_threads);
+		llc_misses.push_back(std::accumulate(res.begin(), res.begin() + offset, 0.0));
+		instruction_count.push_back(std::accumulate(res.begin() + offset, res.end(), 0.0));
 
-		std::cout << "." << std::flush;
+		if (brute_force) {
+			auto i = llc_misses.size() - 1;
 
-		if (bits == get_cbm_mask()) break;
-		bits = increase_bitset(bits);
+			std::cout << std::endl
+					  << std::hex << bits.to_ullong() << std::flush << " \t\t " << std::dec << llc_misses[i] << " \t "
+					  << instruction_count[i] << std::flush;
+
+			bits = general_all_bitmasks();
+		} else {
+			std::cout << "." << std::flush;
+
+			if (bits == get_cbm_mask()) break;
+			bits = increase_bitset(bits);
+		}
 	}
 
 	std::cout << " measurement done!" << std::endl << std::endl;
@@ -309,6 +353,7 @@ int main(int argc, char const *argv[]) {
 				  << llc_misses[i] / max_cache << " \t " << instruction_count[i] << " \t "
 				  << instruction_count[i] / max_instruction << std::endl;
 
+		// TODO broken when using brute-force
 		bits = increase_bitset(bits);
 	}
 
