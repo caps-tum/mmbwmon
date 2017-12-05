@@ -59,20 +59,9 @@ matrix:
       env:
           - COMPILERC=clang
           - COMPILERCXX=clang++
-          - CLANGV=3.9.1
+          - CLANGV=4.0.1
           - CGROUP_SUP=TRUE
-    - compiler:     clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-6
-      env:
-          - COMPILERC=clang
-          - COMPILERCXX=clang++
-          - CLANGV=3.9.1
-          - CGROUP_SUP=FALSE
+          - RUNCLANGTIDY=FALSE
     - compiler:     clang
       addons:
         apt:
@@ -84,6 +73,19 @@ matrix:
           - COMPILERC=clang
           - COMPILERCXX=clang++
           - CLANGV=4.0.1
+          - CGROUP_SUP=FALSE
+          - RUNCLANGTIDY=FALSE
+    - compiler:     clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+          - COMPILERC=clang
+          - COMPILERCXX=clang++
+          - CLANGV=5.0.0
           - CGROUP_SUP=TRUE
           - RUNCLANGTIDY=TRUE
     - compiler:     clang
@@ -96,7 +98,7 @@ matrix:
       env:
           - COMPILERC=clang
           - COMPILERCXX=clang++
-          - CLANGV=4.0.1
+          - CLANGV=5.0.0
           - CGROUP_SUP=FALSE
           - RUNCLANGTIDY=TRUE
 
@@ -106,7 +108,8 @@ before_install:
   - sudo apt-get install cmake
   - mkdir $HOME/clang+llvm
   - export PATH=$HOME/clang+llvm/bin:$PATH
-  - if [ -n "$CLANGV" ]; then wget http://llvm.org/releases/$CLANGV/clang+llvm-$CLANGV-x86_64-linux-gnu-debian8.tar.xz -O $HOME/clang+llvm.tar.xz; fi
+  - if [ -n "$CLANGV" ]; then wget http://llvm.org/releases/$CLANGV/clang+llvm-$CLANGV-x86_64-linux-gnu-debian8.tar.xz -O
+   $HOME/clang+llvm.tar.xz; fi
   - if [ -n "$CLANGV" ]; then tar xf $HOME/clang+llvm.tar.xz -C $HOME/clang+llvm --strip-components 1; fi
 
 script:
