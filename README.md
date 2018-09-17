@@ -1,7 +1,7 @@
 # mmbwmon
 Main Memory Bandwidth Monitor
 
-[![Build Status](https://travis-ci.org/lrr-tum/mmbwmon.svg?branch=master)](https://travis-ci.org/lrr-tum/mmbwmon)
+[![Build Status](https://travis-ci.org/caps-tum/mmbwmon.svg?branch=master)](https://travis-ci.org/caps-tum/mmbwmon)
 
 Mmbwmon is an agent that provides an estimate on the main memory bandwidth used
 on a system. Communication between the agent and other applications is based on
